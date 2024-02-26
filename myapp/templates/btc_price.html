@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<!-- Include jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+<!-- JavaScript code -->
+<script>
+    // Function to update the BTC/USDT price on the page
+    function updatePrice() {
+        $.ajax({
+            url: "{% url 'get_btcusdt_price' %}",
+            dataType: "json",
+            success: function(data) {
+                // Update the relevant element on the page with the new price
+                var symbolName = data.symbol_name;
+                for (var i=0; i< symbolName.length; i++) {
+                var symbol=symbolName[i];
+                var btcusdtPrice=btcusdtPrice + '<p> Symbol: ' + symbol[0] + ': ' + '</p> Percentage: ' + symbol[1];
+                }
+                $('#btcusdt-price').html(btcusdtPrice);
+
+            }
+        });
+    }
+
+    // Call the updatePrice function initially
+    $(document).ready(function() {
+        updatePrice();
+        setInterval(updatePrice, 3000); // Update the price every 5 seconds
+    });
+</script>
+
+<!-- HTML element to display the BTC/USDT price -->
+<p>Symbol: <span id="btcusdt-price"></span></p>
+<p>percentage: <span id="btcusdt-percentage"></span></p>
+
+</html>

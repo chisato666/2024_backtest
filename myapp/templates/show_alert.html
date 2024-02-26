@@ -1,0 +1,31 @@
+<!-- alerts.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Price Alerts Log</title>
+</head>
+<body>
+    <h1>Price Alerts Log</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Interval</th>
+                <th>Percentage Decrease</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in alerts %}
+            <tr>
+                <td>{{ alert.symbol }}</td>
+                <td>{{ alert.interval }}</td>
+                <td>{{ alert.percentage_decrease }}</td>
+                <td>{{ alert.timestamp }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
