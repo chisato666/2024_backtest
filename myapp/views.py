@@ -79,6 +79,10 @@ def submit_backtest(request):
         end_date = request.POST.get('end_date')
         period = request.POST.get('period')
 
+        tp = request.POST.get('tp')
+        sl = request.POST.get('sl')
+
+
         buy_value=[buy_indicator,buy_operator,buy_enter_value]
         sell_value=[sell_indicator,sell_operator,sell_enter_value]
 
@@ -129,6 +133,24 @@ def submit_backtest(request):
 
                     print("rules 2")
 
+
+                if (rules == '3'):
+
+
+                    start_date = '01-01-2023'
+                    end_date = '12-05-2023'
+                    periods = ['1d']
+                    sell_points = []
+                    buy_points = []
+
+
+                    df = function.getdata(symbol, start_date, end_date, period)
+
+                    profits, sell_value, buy_value = function.backtest_ema(df, float(tp), float(sl))
+                    #print(symbol, period, str(int(total)))
+                    #plot_backtest(df, buy_points, sell_points)
+
+
                 # count_profits=((pd.Series(profits) > 0).value_counts())
                 # print((pd.Series(profits) + 1).prod())
                 # print((pd.Series(profits) + 1).cumprod())
@@ -177,7 +199,44 @@ def submit_research(request):
                 print('buyarr',buyarr)
 
                 print("rules 1")
+                
+            elif (rules == '2'):
+                crypto_list = function.get_symbol_list()
+                print(crypto_list)
+                # time_step = 'Day1' # 合约的参数：间隔: Min1、Min5、Min15、Min30、Min60、Hour4、Hour8、Day1、Week1、Month1，不填时默认Min1
 
+                interval = "Week1"  # 1-hour candlestick data
+
+
+                interval = "Day1"  # 1-hour candlestick data
+                count=0
+                add_list=[]
+                list=[]
+                for symbol in crypto_list:
+                    df = function.check_symbols_kline(symbol, period, 80)
+                    add_list=function.check_ema_cross(df, int(limit), symbol)
+                    if add_list:
+                        rank = function.get_market_cap_rank(symbol.split('_')[0])
+                        add_list.append(rank)
+                        list.append(add_list)
+
+                list.sort(key=lambda x: x[2])
+                # market_cap_rankings = {}
+                #
+                # for crypto in crypto_list:
+                #     rank = get_market_cap_rank(crypto)
+                #     if rank is not None:
+                #         market_cap_rankings[crypto] = rank
+                #
+                # sorted_rankings = sorted(market_cap_rankings.items(), key=lambda x: x[1])
+
+
+
+
+                buyarr = pd.DataFrame(list)
+                print('buyarr',buyarr)
+
+                print("rules 2")
 
             # count_profits=((pd.Series(profits) > 0).value_counts())
             # print((pd.Series(profits) + 1).prod())

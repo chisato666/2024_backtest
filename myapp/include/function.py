@@ -10,20 +10,7 @@ from binance.client import Client
 client= Client()
 
 
-def plot_backtest(buy_points,sell_points):
-    plt.plot(df_btc.index, df_btc['Close'], label='BTC Price')
-    plt.plot(df_btc.index, df_btc['EMA_short'], label='EMA Short')
-    plt.plot(df_btc.index, df_btc['EMA_long'], label='EMA Long')
 
-    plt.scatter(*zip(*buy_points), color='green', label='Buy')
-    plt.scatter(*zip(*sell_points), color='red', label='Sell')
-    plt.xlabel('Date/Time')
-    plt.ylabel('BTC Price (USDT)')
-    plt.title('BTC Price with Buy/Sell Points')
-    plt.legend()
-    plt.xticks(rotation=45)
-    plt.grid(True)
-    plt.show()
 
 def getdata(symbol,start_date,end_date,period):
 
@@ -479,6 +466,7 @@ def check_percent_change():
 
 def check_symbols_kline(symbol, interval, limit):
     url = f'https://contract.mexc.com/api/v1/contract/kline/{symbol}?interval={interval}&limit={limit}'
+    #     # time_step = 'Day1' # 合约的参数：间隔: Min1、Min5、Min15、Min30、Min60、Hour4、Hour8、Day1、Week1、Month1，不填时默认Min1
 
     response = requests.get(url)
     data = response.json()
@@ -491,9 +479,24 @@ def check_symbols_kline(symbol, interval, limit):
 
     return df
 
+def get_market_cap_rank(crypto):
+    api_key = '496c4b12-9483-415b-8701-edaddbd510c6'  # Replace with your CoinMarketCap API key
+    url = f"https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?start=1&limit=800&convert=USD"
+    headers = {
+        'Accepts': 'application/json',
+        'X-CMC_PRO_API_KEY': api_key
+    }
+    response = requests.get(url, headers=headers)
+    data = response.json()
+    if 'data' in data:
+        for coin in data['data']:
+            if coin['symbol'].lower() == crypto.lower():
+                return coin['cmc_rank']
+    return 999
+
 def check_ema_cross(data,check_range,symbol):
-    end_date = pd.Timestamp.today()
-    start_date = end_date - pd.DateOffset(days=80)
+    # end_date = pd.Timestamp.today()
+    # start_date = end_date - pd.DateOffset(days=80)
     ema_list=''
 
     if len(data) >= 60:
@@ -508,11 +511,43 @@ def check_ema_cross(data,check_range,symbol):
             if ema_10[i] > ema_50[i] and ema_10[i-1] <= ema_50[i-1]:
                 cross_date = data.index[i]
                 print(f" {symbol} : 10 EMA crossed above 50 EMA on {cross_date}")
-                ema_list=symbol
+                url="https://futures.mexc.com/exchange/" + symbol + "?type=linear_swap"
+                symbol_link=f'<a href="{url}" target="_blank">{symbol}</a>'
+                ema_list=[symbol_link,cross_date]
 
     return ema_list
 
-def backtest_ema(df):
+
+def plot_crypto_price_with_ema(crypto_symbol, data):
+    ema_10 = data['close'].ewm(span=10, adjust=False).mean()
+    ema_50 = data['close'].ewm(span=50, adjust=False).mean()
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(data.index, data['close'], label=f"{crypto_symbol} Price")
+    plt.plot(data.index, ema_10, label="10-day EMA")
+    plt.plot(data.index, ema_50, label="50-day EMA")
+    plt.xlabel("Date")
+    plt.ylabel("Price")
+    plt.title(f"{crypto_symbol} Price with 10-day and 50-day EMA")
+    plt.legend()
+    plt.show()
+
+def plot_backtest(df_btc,buy_points,sell_points):
+    plt.plot(df_btc.index, df_btc['Close'], label='BTC Price')
+    plt.plot(df_btc.index, df_btc['EMA_short'], label='EMA Short')
+    plt.plot(df_btc.index, df_btc['EMA_long'], label='EMA Long')
+
+    plt.scatter(*zip(*buy_points), color='green', label='Buy')
+    plt.scatter(*zip(*sell_points), color='red', label='Sell')
+    plt.xlabel('Date/Time')
+    plt.ylabel('BTC Price (USDT)')
+    plt.title('BTC Price with Buy/Sell Points')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.show()
+
+def backtest_ema(df,tp_percentage,stop_loss_percentage):
 
     # Load the historical price data into a DataFrame
     df_btc = df
@@ -520,8 +555,8 @@ def backtest_ema(df):
     # Define the strategy parameters
     ema_short_period = 10
     ema_long_period = 50
-    stop_loss_percentage = 0.1
-    tp_percentage=0.3
+    # stop_loss_percentage = 0.1
+    # tp_percentage=0.3
 
     rsi_period= 14
 
@@ -569,37 +604,39 @@ def backtest_ema(df):
     return total_profit, buy_points, sell_points
 
 
-crypto_list=get_symbol_list()
-print(crypto_list)
+# crypto_list=get_symbol_list()
+# print(crypto_list)
 
 #check_ema_cross(data,crypto_list)
 
-symbol='BTC_USDT'
-interval = "Day1"  # 1-hour candlestick data
-limit=80
-count=0
-ema_list=[]
-add_list=[]
-for symbol in crypto_list:
-    df = check_symbols_kline(symbol, interval, limit)
-    if check_ema_cross(df, 10, symbol):
-        add_list.append(symbol)
-
-print(add_list)
+# symbol='BTC_USDT'
+# interval = "Day1"  # 1-hour candlestick data
+# limit=80
+# count=0
+# ema_list=[]
+# add_list=[]
+# for symbol in crypto_list:
+#     df = check_symbols_kline(symbol, interval, limit)
+#     if check_ema_cross(df, 10, symbol):
+#         add_list.append(symbol)
+#
+# print(add_list)
 
 symbols=['BTCUSDT','ETHUSDT','SOLUSDT','DOTUSDT','OPUSDT','AVAXUSDT','LINKUSDT','SANDUSDT','SUIUSDT']
+symbols=['BTCUSDT']
+
 start_date='01-01-2023'
 end_date='12-05-2023'
-periods=['1h','4h','1d']
+periods=['1d']
 sell_points=[]
 buy_points=[]
-#
+
 # for symbol in symbols:
 #     for period in periods:
 #         df=getdata(symbol,start_date,end_date,period)
-#         total,sell_points,buy_points=backtest_ema(df)
+#         total,sell_points,buy_points=backtest_ema(df,0.2,0.1)
 #         print(symbol,period,str(int(total)))
-
+#         plot_backtest(df,buy_points, sell_points)
 
 # Fetch historical data using an API or from a CSV file
 # Assuming you have OHLCV (Open, High, Low, Close, Volume) data

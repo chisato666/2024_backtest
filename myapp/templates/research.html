@@ -206,6 +206,8 @@
               <option value="Min60">1hr</option>
               <option value="Hour4" >4hr</option>
               <option value="Day1" selected>1d</option>
+              <option value="Week1" selected>1week</option>
+
             </select>
 		  </div>
 
@@ -225,6 +227,7 @@
 
 		  <select name="rules">
               <option value="1" selected>1. Search the percentage increased within a period of time</option>
+              <option value="2" >2. Search the symbol list of ema10 crossed up ema50 </option>
 
           </select>
 		  </div>
@@ -287,7 +290,7 @@
   {% for p_list in buyarr %}
        <div class="row">
       <div class="cell" data-title="Name">
-        {{ p_list.0 }}
+        {{ p_list.0|safe }}
        </div>
       <div class="cell" data-title="Name">
         {{ p_list.1 }}%
