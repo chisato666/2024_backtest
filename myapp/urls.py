@@ -1,5 +1,6 @@
 from django.urls import path, include
 from . import views
+from .views import graph_view
 
 urlpatterns = [
      path('submit_backtest', views.submit_backtest),
@@ -12,6 +13,7 @@ urlpatterns = [
      path('', views.say_hello),
      path('getProfiles',views.getProfiles, name='getProfiles'),
      path('get_btcusdt_price', views.get_btcusdt_price, name='get_btcusdt_price'),
+     path('graph/', graph_view, name='graph'),
 
      path('ajax/',views.ajax)
 

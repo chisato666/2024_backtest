@@ -93,6 +93,76 @@ def get_rules1(df):
     return pro_total,pro_list,pro_count,all_arr,df
 
 
+def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl):
+
+    # Load the historical price data into a DataFrame
+    df_btc = df
+    profits=[]
+    all_arr=[]
+
+    # Define the strategy parameters
+    ema_short_period = 10
+    ema_long_period = 50
+    # stop_loss_percentage = 0.1
+    # tp_percentage=0.3
+
+    rsi_period= 14
+
+
+    # Calculate the EMA values
+    df_btc['EMA_short'] = df_btc['Close'].ewm(span=ema_short_period, adjust=False).mean()
+    df_btc['EMA_long'] = df_btc['Close'].ewm(span=ema_long_period, adjust=False).mean()
+
+    # Calculate the RSI values
+    df_btc['RSI'] = ta.RSI(df_btc['Close'], timeperiod=rsi_period)
+
+    # Initialize variables
+    btc_position = False
+    buy_amount=1000
+    btc_buy_price = 0
+    total_profit = 0
+    buy_points=[]
+    sell_points = []
+
+    # Backtest the strategy
+    for i in range(1, len(df_btc)):
+        # BTCUSDT
+        if not btc_position and df_btc['EMA_short'][i] > df_btc['EMA_long'][i] and df_btc['EMA_short'][i - 1] < \
+                df_btc['EMA_long'][i - 1] :
+            btc_position = True
+            btc_buy_price = df_btc['Close'][i]
+            btc_stop_loss = btc_buy_price * (1 - stop_loss_percentage)
+            tp= btc_buy_price * (1 + tp_percentage)
+            buy_points.append((df_btc.index[i], df_btc['Close'][i]))
+
+        #Moving the SL is the current price increased
+        elif moving_sl=='yes' and btc_position and df_btc['Close'][i] * (1 - stop_loss_percentage) > btc_stop_loss:
+            tp = df_btc['Close'][i] * (1 + tp_percentage)
+            btc_stop_loss = df_btc['Close'][i] * (1 - stop_loss_percentage)
+        elif (btc_position and df_btc['Close'][i] <= btc_stop_loss) or (btc_position and df_btc['Close'][i] >=tp):
+            btc_position = False
+            btc_sell_price = df_btc['Close'][i]
+            btc_profit = round(((btc_sell_price - btc_buy_price) / btc_buy_price) * 100,2)
+
+            profits.append(btc_profit)
+            total_profit = total_profit + btc_profit
+            sell_points.append((df_btc.index[i], df_btc['Close'][i]))
+            line = [df_btc.index[i], btc_buy_price, btc_sell_price, btc_profit]
+            all_arr.append(line)
+
+                #print(f" Price {df_btc.index[i]} - Buy at {btc_buy_price:.2f}, Sell at {btc_sell_price:.2f}, Profit: {btc_profit:.2f} ,Total: {total_profit:.2f}")
+
+    pro_count = ((pd.Series(profits) > 0).value_counts())
+    pro_list = ((pd.Series(profits) ).cumprod())
+    # total=((pd.Series(profits) + 1).cumprod())
+    pro_total = (pd.Series(profits) ).prod()
+
+    plot_backtest(df_btc, buy_points, sell_points)
+
+    return total_profit,pro_list,pro_count,all_arr,df
+
+
+
 def check_symbols_with_increased_5d(percent, interval, limit):
     url = "https://contract.mexc.com/api/v1/contract/ticker"
     response = requests.get(url)
@@ -494,23 +564,23 @@ def get_market_cap_rank(crypto):
                 return coin['cmc_rank']
     return 999
 
-def check_ema_cross(data,check_range,symbol):
+def check_ema_cross(data,check_range,symbol,ema_short,ema_long):
     # end_date = pd.Timestamp.today()
     # start_date = end_date - pd.DateOffset(days=80)
     ema_list=''
 
-    if len(data) >= 60:
-        data['ema_10'] = data['close'].ewm(span=10, adjust=False).mean()
-        data['ema_50'] = data['close'].ewm(span=50, adjust=False).mean()
+    if len(data) >= ema_long :
+        data['ema_short'] = data['close'].ewm(span=ema_short, adjust=False).mean()
+        data['ema_long'] = data['close'].ewm(span=ema_long, adjust=False).mean()
 
-        ema_10 = data['close'].ewm(span=10, adjust=False).mean()
-        ema_50 = data['close'].ewm(span=50, adjust=False).mean()
+        ema_short = data['close'].ewm(span=ema_short, adjust=False).mean()
+        ema_long = data['close'].ewm(span=ema_long, adjust=False).mean()
         #data.dropna(inplace=True)
 
         for i in range(len(data)-check_range,len(data)):
-            if ema_10[i] > ema_50[i] and ema_10[i-1] <= ema_50[i-1]:
+            if ema_short[i] > ema_long[i] and ema_short[i-1] <= ema_long[i-1]:
                 cross_date = data.index[i]
-                print(f" {symbol} : 10 EMA crossed above 50 EMA on {cross_date}")
+                print(f" {symbol} : {ema_short} EMA crossed above {ema_long} EMA on {cross_date}")
                 url="https://futures.mexc.com/exchange/" + symbol + "?type=linear_swap"
                 symbol_link=f'<a href="{url}" target="_blank">{symbol}</a>'
                 ema_list=[symbol_link,cross_date]
@@ -533,19 +603,25 @@ def plot_crypto_price_with_ema(crypto_symbol, data):
     plt.show()
 
 def plot_backtest(df_btc,buy_points,sell_points):
-    plt.plot(df_btc.index, df_btc['Close'], label='BTC Price')
+
+    plt.figure(figsize=(14,8))
+
+    plt.plot(df_btc.index, df_btc['Close'], label=' Price')
     plt.plot(df_btc.index, df_btc['EMA_short'], label='EMA Short')
     plt.plot(df_btc.index, df_btc['EMA_long'], label='EMA Long')
 
     plt.scatter(*zip(*buy_points), color='green', label='Buy')
     plt.scatter(*zip(*sell_points), color='red', label='Sell')
     plt.xlabel('Date/Time')
-    plt.ylabel('BTC Price (USDT)')
-    plt.title('BTC Price with Buy/Sell Points')
+    plt.ylabel('Price (USDT)')
+    plt.title('Price with Buy/Sell Points')
     plt.legend()
     plt.xticks(rotation=45)
     plt.grid(True)
-    plt.show()
+    graph_path = '/Users/apple/PycharmProjects/2024_backtest/myapp/static/graph/graph2.png'
+    plt.savefig(graph_path)
+    plt.close()
+    #plt.show()
 
 def backtest_ema(df,tp_percentage,stop_loss_percentage):
 
@@ -589,11 +665,13 @@ def backtest_ema(df,tp_percentage,stop_loss_percentage):
                 buy_points.append((df_btc.index[i], df_btc['Close'][i]))
 
             elif btc_position and df_btc['Close'][i] * (1 - stop_loss_percentage) > btc_stop_loss:
+                tp= df_btc['Close'][i] * (1 + tp_percentage)
+
                 btc_stop_loss = df_btc['Close'][i] * (1 - stop_loss_percentage)
             elif (btc_position and df_btc['Close'][i] <= btc_stop_loss) or (btc_position and df_btc['Close'][i] >=tp):
                 btc_position = False
                 btc_sell_price = df_btc['Close'][i]
-                btc_profit = ((btc_sell_price - btc_buy_price) / btc_buy_price) * buy_amount
+                btc_profit = ((btc_sell_price - btc_buy_price) / btc_buy_price) *100
                 total_profit = total_profit + btc_profit
                 sell_points.append((df_btc.index[i], df_btc['Close'][i]))
 
@@ -623,20 +701,24 @@ def backtest_ema(df,tp_percentage,stop_loss_percentage):
 # print(add_list)
 
 symbols=['BTCUSDT','ETHUSDT','SOLUSDT','DOTUSDT','OPUSDT','AVAXUSDT','LINKUSDT','SANDUSDT','SUIUSDT']
-symbols=['BTCUSDT']
 
-start_date='01-01-2023'
-end_date='12-05-2023'
-periods=['1d']
+start_date='01-01-2024'
+end_date='21-3-2024'
+periods=['1h','4h','1d']
 sell_points=[]
 buy_points=[]
+
+# df=getdata('BTCUSDT',start_date,end_date,periods)
+# total,sell_points,buy_points=backtest_ema(df,0.2,0.1)
+# plot_backtest(df,buy_points, sell_points)
+
 
 # for symbol in symbols:
 #     for period in periods:
 #         df=getdata(symbol,start_date,end_date,period)
-#         total,sell_points,buy_points=backtest_ema(df,0.2,0.1)
+#         total,sell_points,buy_points=backtest_ema(df,0.3,0.1)
 #         print(symbol,period,str(int(total)))
-#         plot_backtest(df,buy_points, sell_points)
+        #plot_backtest(df,buy_points, sell_points)
 
 # Fetch historical data using an API or from a CSV file
 # Assuming you have OHLCV (Open, High, Low, Close, Volume) data

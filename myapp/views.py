@@ -7,6 +7,9 @@ from binance.client import Client
 from binance.enums import *
 from myapp.include import config, function, oo_backtest, check_decrease_alert
 import pandas as pd
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import io, random
@@ -19,6 +22,44 @@ from datetime import datetime
 client = Client(config.api_key, config.api_secret)
 
 from myapp.models import PriceAlert
+
+
+
+def plot_backtest(df_btc,buy_points,sell_points):
+    plt.plot(df_btc.index, df_btc['Close'], label='BTC Price')
+    plt.plot(df_btc.index, df_btc['EMA_short'], label='EMA Short')
+    plt.plot(df_btc.index, df_btc['EMA_long'], label='EMA Long')
+
+    plt.scatter(*zip(*buy_points), color='green', label='Buy')
+    plt.scatter(*zip(*sell_points), color='red', label='Sell')
+    plt.xlabel('Date/Time')
+    plt.ylabel('BTC Price (USDT)')
+    plt.title('BTC Price with Buy/Sell Points')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.show()
+
+def graph_view(request):
+    # Generate some data for the graph
+    x = [1, 2, 3, 4, 5]
+    y = [2, 4, 6, 8, 10]
+
+    # Create the graph
+    plt.plot(x, y)
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('Sample Graph')
+
+    # Save the graph to a temporary file
+    graph_path = '/Users/apple/PycharmProjects/2024_backtest/myapp/static/graph/graph.png'
+    plt.savefig(graph_path)
+    plt.close()
+
+    # Render the graph in the template
+    return render(request, 'graph.html', {'graph_path': graph_path})
+
+
 
 def show_alert(request):
     alert = PriceAlert(
@@ -72,6 +113,7 @@ def submit_backtest(request):
 
         rules=(request.POST.get('rules'))
         custom=(request.POST.get('custom'))
+        moving_sl=(request.POST.get('moving_sl'))
 
 
         symbol = request.POST.get('symbol')
@@ -137,16 +179,18 @@ def submit_backtest(request):
                 if (rules == '3'):
 
 
-                    start_date = '01-01-2023'
-                    end_date = '12-05-2023'
-                    periods = ['1d']
+                    # start_date = '01-01-2023'
+                    # end_date = '12-05-2023'
+                    # periods = ['1d']
                     sell_points = []
                     buy_points = []
 
 
                     df = function.getdata(symbol, start_date, end_date, period)
 
-                    profits, sell_value, buy_value = function.backtest_ema(df, float(tp), float(sl))
+                    profits, pro_list, pro_count, buyarr, plt = function.get_rules3(df, float(tp), float(sl),moving_sl)
+
+                   # profits, sell_value, buy_value = function.get_rules3(df, float(tp), float(sl))
                     #print(symbol, period, str(int(total)))
                     #plot_backtest(df, buy_points, sell_points)
 
@@ -181,6 +225,8 @@ def submit_research(request):
         rules=(request.POST.get('rules'))
         period = request.POST.get('period')
         limit = request.POST.get('limit')
+        ema_short = request.POST.get('ema_short')
+        ema_long = request.POST.get('ema_long')
 
 
         # symbol = request.POST.get('symbol')
@@ -213,8 +259,8 @@ def submit_research(request):
                 add_list=[]
                 list=[]
                 for symbol in crypto_list:
-                    df = function.check_symbols_kline(symbol, period, 80)
-                    add_list=function.check_ema_cross(df, int(limit), symbol)
+                    df = function.check_symbols_kline(symbol, period, int(ema_long) + 100)
+                    add_list=function.check_ema_cross(df, int(limit), symbol,int(ema_short),int(ema_long))
                     if add_list:
                         rank = function.get_market_cap_rank(symbol.split('_')[0])
                         add_list.append(rank)
@@ -250,6 +296,7 @@ def submit_research(request):
 
     data = {
         "enter_percent": percent,
+        "period": period,
         "limit": limit
 
     }
