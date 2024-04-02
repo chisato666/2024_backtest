@@ -2,9 +2,47 @@
 <html>
 <head>
     <title>Graph</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <h1>Graph</h1>
+    <form>
+  <select id="option-select">
+    <option value="1">Option 1</option>
+    <option value="2">Option 2</option>
+  </select>
+
+  <div id="input-form-1" style="display: none;">
+    <!-- Input form for Option 1 -->
+
+      form 1 XXX
+    <input type="text" name="option1-input">
+    <!-- Add more input fields as needed -->
+  </div>
+
+  <div id="input-form-2" style="display: none;">
+    <!-- Input form for Option 2 -->
+      form 2 xxx
+    <input type="text" name="option2-input">
+    <!-- Add more input fields as needed -->
+  </div>
+
+  <button type="submit">Submit</button>
+        <script>
+  $(document).ready(function() {
+    $('#option-select').change(function() {
+      var selectedOption = $(this).val();
+      if (selectedOption === '1') {
+        $('#input-form-1').show();
+        $('#input-form-2').hide();
+      } else if (selectedOption === '2') {
+        $('#input-form-1').hide();
+        $('#input-form-2').show();
+      }
+    });
+  });
+</script>
+</form>
     <img src="../static/graph/graph.png" alt="Graph">
 </body>
 </html>

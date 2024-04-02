@@ -93,7 +93,7 @@ def get_rules1(df):
     return pro_total,pro_list,pro_count,all_arr,df
 
 
-def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl):
+def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl,sell_type, over_ema, ema_short_period=5,ema_long_period=10,reverse_trade='No'):
 
     # Load the historical price data into a DataFrame
     df_btc = df
@@ -101,8 +101,9 @@ def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl):
     all_arr=[]
 
     # Define the strategy parameters
-    ema_short_period = 10
-    ema_long_period = 50
+    # if ema_short > 0:
+    # ema_short_period = 10
+    # ema_long_period = 50
     # stop_loss_percentage = 0.1
     # tp_percentage=0.3
 
@@ -120,36 +121,53 @@ def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl):
     btc_position = False
     buy_amount=1000
     btc_buy_price = 0
+    btc_sell_price = 0
+
     total_profit = 0
     buy_points=[]
     sell_points = []
-
+#and df_btc['Close'][i] > over_ema
     # Backtest the strategy
     for i in range(1, len(df_btc)):
         # BTCUSDT
         if not btc_position and df_btc['EMA_short'][i] > df_btc['EMA_long'][i] and df_btc['EMA_short'][i - 1] < \
-                df_btc['EMA_long'][i - 1] :
+                df_btc['EMA_long'][i - 1]  :
             btc_position = True
             btc_buy_price = df_btc['Close'][i]
             btc_stop_loss = btc_buy_price * (1 - stop_loss_percentage)
             tp= btc_buy_price * (1 + tp_percentage)
             buy_points.append((df_btc.index[i], df_btc['Close'][i]))
 
+            if btc_sell_price > 0 and reverse_trade=='Yes':
+                reverse_profit=btc_sell_price - btc_buy_price
+                line = [df_btc.index[i], btc_buy_price, btc_sell_price, reverse_profit]
+                all_arr.append(line)
+                total_profit = total_profit + reverse_profit
+
+
         #Moving the SL is the current price increased
         elif moving_sl=='yes' and btc_position and df_btc['Close'][i] * (1 - stop_loss_percentage) > btc_stop_loss:
             tp = df_btc['Close'][i] * (1 + tp_percentage)
             btc_stop_loss = df_btc['Close'][i] * (1 - stop_loss_percentage)
-        elif (btc_position and df_btc['Close'][i] <= btc_stop_loss) or (btc_position and df_btc['Close'][i] >=tp):
+        elif (sell_type=='TPSL' and btc_position and ((df_btc['Close'][i] <= btc_stop_loss) or (btc_position and df_btc['Close'][i] >=tp))):
             btc_position = False
             btc_sell_price = df_btc['Close'][i]
             btc_profit = round(((btc_sell_price - btc_buy_price) / btc_buy_price) * 100,2)
-
             profits.append(btc_profit)
             total_profit = total_profit + btc_profit
             sell_points.append((df_btc.index[i], df_btc['Close'][i]))
             line = [df_btc.index[i], btc_buy_price, btc_sell_price, btc_profit]
             all_arr.append(line)
-
+        elif (sell_type=='cross_down' and btc_position and df_btc['EMA_short'][i] < df_btc['EMA_long'][i] and df_btc['EMA_short'][i - 1] > \
+                df_btc['EMA_long'][i - 1]):
+            btc_position = False
+            btc_sell_price = df_btc['Close'][i]
+            btc_profit = round(((btc_sell_price - btc_buy_price) / btc_buy_price) * 100, 2)
+            profits.append(btc_profit)
+            total_profit = total_profit + btc_profit
+            sell_points.append((df_btc.index[i], df_btc['Close'][i]))
+            line = [df_btc.index[i], btc_buy_price, btc_sell_price, btc_profit]
+            all_arr.append(line)
                 #print(f" Price {df_btc.index[i]} - Buy at {btc_buy_price:.2f}, Sell at {btc_sell_price:.2f}, Profit: {btc_profit:.2f} ,Total: {total_profit:.2f}")
 
     pro_count = ((pd.Series(profits) > 0).value_counts())

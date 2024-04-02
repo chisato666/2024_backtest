@@ -4,6 +4,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <title>Coinguyshk back test Form</title>
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
@@ -227,7 +229,9 @@
 
 		 <select id="symbol" name="symbol">
                     {% for symbol in symbols %}
+                    {% if 'USDT' in symbol.symbol %}
                         <option {% if data.symbol == symbol.symbol %}selected{% endif %}>{{ symbol.symbol }}</option>
+                    {% endif %}
                     {% endfor %}
                 </select>
 		  </div>
@@ -235,7 +239,7 @@
 		     <div class="item">
           <p>Trading Rules </p>
 
-		  <select name="rules">
+		  <select id="option-select" name="rules">
               <option value="1" selected>1. Check the price increased 1% buy, TP 2% SL 2%</option>
               <option value="2">2. RSI > 70 buy and > upper BB , RSI < 30 and < lower BB Sell</option>
               <option value="3">3. 10ema cross up 50ema </option>
@@ -244,6 +248,29 @@
               <option value="6">6. </option>
             </select>
 		  </div>
+
+         <div class="item">
+          <p>Sell type</p>
+
+		  <select name="sell_type">
+              <option value=""></option>
+              <option value="TPSL" {% if data.sell_type == 'TPSL' %}selected{% endif %}>TP/SL</option>
+
+              <option value="cross_down" {% if data.sell_type == 'cross_down' %}selected{% endif %}>cross_down</option>
+            </select>
+		  </div>
+        <div id="input-form-1" >
+    <!-- Input form for Option 1 -->
+            EMA Short
+    <input type="text" name="ema_short">
+            EMA Long
+    <input type="text" name="ema_long">
+
+                Over EMA
+    <input type="text" name="over_ema">
+    <!-- Add more input fields as needed -->
+  </div>
+
 
         <div class="question">
           <p>Target Profit /Stop Loss</p>
@@ -259,7 +286,18 @@
         <div class="question">
           <p>&nbsp;</p>
         </div>
-
+         <div class="question">
+          <p>Reverse Trade</p>
+          <div class="question-answer">
+            <input type="radio" value="yes" id="radio_r1" name="reverse_trade"/>
+            <label for="radio_r1" class="radio"><span>Yes</span></label>
+            <input type="radio" value="no" id="radio_r2" name="reverse_trade" />
+            <label for="radio_r2" class="radio"><span>No</span></label>
+          </div>
+        </div>
+        <div class="question">
+          <p>&nbsp;</p>
+        </div>
 
          <div class="question">
           <p>Moving SL</p>
@@ -455,10 +493,21 @@
 
 <div>
 
-                          <img align='center' src='../static/graph/graph2.png' alt="Graph">
+                          <img align='center' src="../static/graph/graph2.png?{{ data.time_now }}" alt="Graph">
 
 
 </div>
-
+  <script>
+  $(document).ready(function() {
+    $('#option-select').change(function() {
+      var selectedOption = $(this).val();
+      if (selectedOption === '3') {
+        $('#input-form-1').show();
+      } else if (selectedOption === '1') {
+        $('#input-form-1').hide();
+      }
+    });
+  });
+</script>
   </body>
 </html>

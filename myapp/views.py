@@ -16,7 +16,7 @@ import io, random
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 from datetime import datetime
-
+import time
 
 
 client = Client(config.api_key, config.api_secret)
@@ -100,6 +100,7 @@ def submit_backtest(request):
 
     exchange_info = client.get_exchange_info()
     symbols = exchange_info['symbols']
+    time_now= int(time.time())
 
     if request.method=="POST":
         print(request.POST.get('symbol'))
@@ -114,6 +115,13 @@ def submit_backtest(request):
         rules=(request.POST.get('rules'))
         custom=(request.POST.get('custom'))
         moving_sl=(request.POST.get('moving_sl'))
+        reverse_trade=(request.POST.get('reverse_trade'))
+
+        ema_short=(request.POST.get('ema_short'))
+        ema_long=(request.POST.get('ema_long'))
+        over_ema=(request.POST.get('over_ema'))
+
+        sell_type=(request.POST.get('sell_type'))
 
 
         symbol = request.POST.get('symbol')
@@ -188,7 +196,7 @@ def submit_backtest(request):
 
                     df = function.getdata(symbol, start_date, end_date, period)
 
-                    profits, pro_list, pro_count, buyarr, plt = function.get_rules3(df, float(tp), float(sl),moving_sl)
+                    profits, pro_list, pro_count, buyarr, plt = function.get_rules3(df, float(tp), float(sl), moving_sl, sell_type, over_ema, int(ema_short),int(ema_long),reverse_trade)
 
                    # profits, sell_value, buy_value = function.get_rules3(df, float(tp), float(sl))
                     #print(symbol, period, str(int(total)))
@@ -211,7 +219,8 @@ def submit_backtest(request):
         "period": period,
         "symbol": symbol,
         "buy_value": buy_value,
-        "sell_value": sell_value
+        "sell_value": sell_value,
+        "time_now": time_now
 
     }
 
