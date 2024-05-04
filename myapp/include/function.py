@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time,pytz
 from datetime import datetime
 import talib as ta
-
+import csv
 from binance.client import Client
 client= Client()
 
@@ -13,6 +13,9 @@ client= Client()
 
 
 def getdata(symbol,start_date,end_date,period):
+
+    #interval = c("1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h",
+    #             "1d", "3d", "1w", "1M"),
 
     if (period !=""):
         df = pd.DataFrame(client.get_historical_klines(symbol,period,start_date,end_date))
@@ -31,24 +34,94 @@ def getdata(symbol,start_date,end_date,period):
 
     return df
 
+def backtest_excel(df):
 
-def get_rules1(df):
+    rows = [row for row in df]
+
+    data = {
+        "Rules": 'Rules',
+
+        "Start Date": 'Start Date',
+        "End Date": 'End Date',
+
+        "Timeframe": "Timeframe",
+        "Symbol": 'Symbol',
+
+        "TP": 'TP',
+        "SL": 'SL',
+        "in_diff": 'in_diff',
+
+        "Profit": 'Profit',
+        "Profit Count": 'Profit Count'
+    }
+    df = pd.DataFrame(data, index=[0])
+
+    rules=0
+    start_date=1
+    end_date=2
+    symbol=3
+    period=4
+    tp=5
+    sl=6
+    in_diff=7
+
+    for row in rows:
+
+        if row[rules]=='1':
+
+            df2 = getdata(row[symbol], row[start_date], row[end_date], row[period])
+            print(df2,'df2')
+            profits, pro_list, pro_count, buyarr, plt = get_rules1(df2, row[in_diff], row[tp], row[sl])
+            profits = (profits - 1) * 100
+
+            print(profits,'profits')
+            print(pro_count,'pro_count')
+
+
+            df = df.append({
+                "Rules": row[rules],
+                "Start Date": row[start_date],
+                "End Date": row[end_date],
+                "Timeframe": row[period],
+
+                "Symbol": row[symbol],
+                "TP": row[tp],
+
+                "SL": row[sl],
+                "in_diff": row[in_diff],
+
+                "Profit": profits,
+                "Profit Count": pro_count
+            }, ignore_index=True)
+
+
+
+    with open('/Users/apple/PycharmProjects/2024_backtest/static/csv/test.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        for i in range(len(df)):
+            writer.writerow(df.loc[i, :])
+
+def get_rules1(df,in_diff,in_tp,in_sl):
     in_position=False
     profits=[]
     all_arr=[]
     buy_arr=[]
     sell_arr=[]
     signalBuy=[]
+    buy_points=[]
+    sell_points = []
     #and row.Close>row.SMA200
 
 
     for index, row in df.iterrows():
         if not in_position:
-            if row.ret > 0.01:
+            if row.ret > float(in_diff):
                 buyprice=row.price
                 bought_at = index
-                tp= buyprice * 1.02
-                sl= buyprice * 0.98
+                tp= buyprice * (1 + float(in_tp))
+                sl= buyprice * (1 - float(in_sl))
+                buy_points.append((index, buyprice))
+
                 in_position=True
         if in_position and index > bought_at:
             if row.High > tp:
@@ -57,6 +130,7 @@ def get_rules1(df):
                 line=[index,buyprice,row.High,profit]
                 buy_arr.append(line)
                 all_arr.append(line)
+                sell_points.append((index, row.High))
 
                 signalBuy.append(buyprice)
 
@@ -66,6 +140,7 @@ def get_rules1(df):
                 line=[index,buyprice,row.Low,profit]
                 all_arr.append(line)
                 sell_arr.append(line)
+                sell_points.append((index, row.Low))
 
                 profits.append(profit)
                 in_position=False
@@ -88,12 +163,16 @@ def get_rules1(df):
 
     df['signal']=pd.Series([signalBuy])
 
+    print(buy_points)
+    print(sell_points)
+
+    plot_backtest(df, buy_points, sell_points)
 
     #plt.scatter(self.sell_arr.index, self.sell_arr.values, marker='v', c='r')
     return pro_total,pro_list,pro_count,all_arr,df
 
 
-def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl,sell_type, over_ema, ema_short_period=5,ema_long_period=10,reverse_trade='No'):
+def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl,sell_type, over_ema=0, ema_short_period=5,ema_long_period=10,reverse_trade='No'):
 
     # Load the historical price data into a DataFrame
     df_btc = df
@@ -113,6 +192,7 @@ def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl,sell_type, over_e
     # Calculate the EMA values
     df_btc['EMA_short'] = df_btc['Close'].ewm(span=ema_short_period, adjust=False).mean()
     df_btc['EMA_long'] = df_btc['Close'].ewm(span=ema_long_period, adjust=False).mean()
+    df_btc['over_ema'] = df_btc['Close'].ewm(span=int(over_ema), adjust=False).mean()
 
     # Calculate the RSI values
     df_btc['RSI'] = ta.RSI(df_btc['Close'], timeperiod=rsi_period)
@@ -131,7 +211,7 @@ def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl,sell_type, over_e
     for i in range(1, len(df_btc)):
         # BTCUSDT
         if not btc_position and df_btc['EMA_short'][i] > df_btc['EMA_long'][i] and df_btc['EMA_short'][i - 1] < \
-                df_btc['EMA_long'][i - 1]  :
+                df_btc['EMA_long'][i - 1] and (df_btc['Close'][i] > df_btc['over_ema'][i])  :
             btc_position = True
             btc_buy_price = df_btc['Close'][i]
             btc_stop_loss = btc_buy_price * (1 - stop_loss_percentage)
@@ -180,6 +260,35 @@ def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl,sell_type, over_e
     return total_profit,pro_list,pro_count,all_arr,df
 
 
+
+
+def plot_backtest(df_btc, buy_points, sell_points):
+    plt.figure(figsize=(14, 8))
+
+    plt.plot(df_btc.index, df_btc['Close'], label=' Price')
+
+    if 'EMA_short' in df_btc:
+        plt.plot(df_btc.index, df_btc['EMA_short'], label='EMA Short')
+
+    if 'EMA_long' in df_btc:
+        plt.plot(df_btc.index, df_btc['EMA_long'], label='EMA Long')
+
+    if 'over_ema' in df_btc:
+        plt.plot(df_btc.index, df_btc['over_ema'], label='Over EMA')
+
+    plt.scatter(*zip(*buy_points), color='green', label='Buy')
+    plt.scatter(*zip(*sell_points), color='red', label='Sell')
+
+    plt.xlabel('Date/Time')
+    plt.ylabel('Price (USDT)')
+    plt.title('Price with Buy/Sell Points')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    graph_path = '/Users/apple/PycharmProjects/2024_backtest/myapp/static/graph/graph2.png'
+    plt.savefig(graph_path)
+    plt.close()
+    # plt.show()
 
 def check_symbols_with_increased_5d(percent, interval, limit):
     url = "https://contract.mexc.com/api/v1/contract/ticker"
@@ -582,7 +691,7 @@ def get_market_cap_rank(crypto):
                 return coin['cmc_rank']
     return 999
 
-def check_ema_cross(data,check_range,symbol,ema_short,ema_long):
+def check_ema_cross(data,check_range,symbol,ema_short,ema_long,cross_direction):
     # end_date = pd.Timestamp.today()
     # start_date = end_date - pd.DateOffset(days=80)
     ema_list=''
@@ -595,10 +704,13 @@ def check_ema_cross(data,check_range,symbol,ema_short,ema_long):
         ema_long = data['close'].ewm(span=ema_long, adjust=False).mean()
         #data.dropna(inplace=True)
 
-        for i in range(len(data)-check_range,len(data)):
-            if ema_short[i] > ema_long[i] and ema_short[i-1] <= ema_long[i-1]:
+        for i in range(len(data) - check_range,len(data)):
+
+            # if ((cross_direction=='up' and ([i] > ema_long[i] and ema_short[i-1] <= ema_long[i-1])) or (cross_direction=='down' and ([i] < ema_long[i] and ema_short[i-1] >= ema_long[i-1]))):
+
+            if  ([i] > ema_long[i] and ema_short[i - 1] <= ema_long[i - 1]):
                 cross_date = data.index[i]
-                print(f" {symbol} : {ema_short} EMA crossed above {ema_long} EMA on {cross_date}")
+                print(f" {symbol} : {ema_short} EMA crossed {cross_direction} above {ema_long} EMA on {cross_date}")
                 url="https://futures.mexc.com/exchange/" + symbol + "?type=linear_swap"
                 symbol_link=f'<a href="{url}" target="_blank">{symbol}</a>'
                 ema_list=[symbol_link,cross_date]
@@ -620,26 +732,7 @@ def plot_crypto_price_with_ema(crypto_symbol, data):
     plt.legend()
     plt.show()
 
-def plot_backtest(df_btc,buy_points,sell_points):
 
-    plt.figure(figsize=(14,8))
-
-    plt.plot(df_btc.index, df_btc['Close'], label=' Price')
-    plt.plot(df_btc.index, df_btc['EMA_short'], label='EMA Short')
-    plt.plot(df_btc.index, df_btc['EMA_long'], label='EMA Long')
-
-    plt.scatter(*zip(*buy_points), color='green', label='Buy')
-    plt.scatter(*zip(*sell_points), color='red', label='Sell')
-    plt.xlabel('Date/Time')
-    plt.ylabel('Price (USDT)')
-    plt.title('Price with Buy/Sell Points')
-    plt.legend()
-    plt.xticks(rotation=45)
-    plt.grid(True)
-    graph_path = '/Users/apple/PycharmProjects/2024_backtest/myapp/static/graph/graph2.png'
-    plt.savefig(graph_path)
-    plt.close()
-    #plt.show()
 
 def backtest_ema(df,tp_percentage,stop_loss_percentage):
 

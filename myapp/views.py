@@ -17,13 +17,30 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 from datetime import datetime
 import time
-
+import csv
 
 client = Client(config.api_key, config.api_secret)
 
 from myapp.models import PriceAlert
 
 
+from django.conf import settings
+
+
+def backtest_view(request):
+    if request.method == 'POST' and request.FILES['file']:
+        file = request.FILES['file']
+        #df = pd.read_excel(file)
+        df = csv.reader(file.read().decode('utf-8').splitlines())
+        try:
+            function.backtest_excel(df)
+        except Exception as error:
+            # handle the exception
+            print("An save exception occurred: ", error)
+
+        return render(request, 'result.html', {'result': df})
+
+    return render(request, 'upload.html')
 
 def plot_backtest(df_btc,buy_points,sell_points):
     plt.plot(df_btc.index, df_btc['Close'], label='BTC Price')
@@ -117,6 +134,9 @@ def submit_backtest(request):
         moving_sl=(request.POST.get('moving_sl'))
         reverse_trade=(request.POST.get('reverse_trade'))
 
+        in_diff=(request.POST.get('in_diff'))
+
+
         ema_short=(request.POST.get('ema_short'))
         ema_long=(request.POST.get('ema_long'))
         over_ema=(request.POST.get('over_ema'))
@@ -161,8 +181,8 @@ def submit_backtest(request):
 
                 if (rules == '1'):
                     df = function.getdata(symbol, start_date, end_date, period)
-                    print(df)
-                    profits, pro_list, pro_count, buyarr, plt = function.get_rules1(df)
+                    #print(df)
+                    profits, pro_list, pro_count, buyarr, plt = function.get_rules1(df,in_diff,tp,sl)
                     profits = (profits - 1) * 100
                     # plot=get_plot(plt)
                     # plt.savefig(os.path.join('static', 'images', 'plot.png'))
@@ -236,6 +256,7 @@ def submit_research(request):
         limit = request.POST.get('limit')
         ema_short = request.POST.get('ema_short')
         ema_long = request.POST.get('ema_long')
+        cross_direction = request.POST.get('cross_direction')
 
 
         # symbol = request.POST.get('symbol')
@@ -269,7 +290,7 @@ def submit_research(request):
                 list=[]
                 for symbol in crypto_list:
                     df = function.check_symbols_kline(symbol, period, int(ema_long) + 100)
-                    add_list=function.check_ema_cross(df, int(limit), symbol,int(ema_short),int(ema_long))
+                    add_list=function.check_ema_cross(df, int(limit), symbol,int(ema_short),int(ema_long),cross_direction)
                     if add_list:
                         rank = function.get_market_cap_rank(symbol.split('_')[0])
                         add_list.append(rank)

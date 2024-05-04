@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backtest Result</title>
+</head>
+<body>
+    <h2>Backtest Result</h2>
+    <table>
+        <thead>
+            <tr>
+                <!-- 列出Excel中的所有列名 -->
+                {% for column in result.columns %}
+                    <th>{{ column }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 列出Excel中的所有行 -->
+            {% for _, row in result.iterrows %}
+                <tr>
+                    <!-- 列出每个单元格的值 -->
+                    {% for _, value in row.iteritems %}
+                        <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

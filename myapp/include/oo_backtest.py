@@ -101,28 +101,28 @@ class Backtest:
     #     plt.scatter(self.sell_arr.index, self.sell_arr.values, marker='v', c='r')
 
 
-symbol='ETHUSDT'
-start_date='2023-06-10'
-end_date='2023-08-02'
-period='1h'
-buy_value=['rsi','<',50]
-sell_value=['rsi','>',70]
-
-instance = Backtest(symbol,start_date,end_date,period,buy_value,sell_value)
-
-print(instance.buy_arr)
-
-print(instance.sell_arr)
+# symbol='ETHUSDT'
+# start_date='2023-06-10'
+# end_date='2023-08-02'
+# period='1h'
+# buy_value=['rsi','<',50]
+# sell_value=['rsi','>',70]
 #
-print(instance.profit)
+# instance = Backtest(symbol,start_date,end_date,period,buy_value,sell_value)
 #
-print(instance.cumul_profit)
-pro_count = ((pd.Series(instance.profit) > 0).value_counts())
-print(pro_count)
-print(list(zip(instance.buy_arr.index,instance.buy_arr,instance.sell_arr,instance.profit)))
-
-pd.set_option('display.max_rows', 1000)
-pd.set_option('display.max_columns', 20)
+# print(instance.buy_arr)
+#
+# print(instance.sell_arr)
+# #
+# print(instance.profit)
+# #
+# print(instance.cumul_profit)
+# pro_count = ((pd.Series(instance.profit) > 0).value_counts())
+# print(pro_count)
+# print(list(zip(instance.buy_arr.index,instance.buy_arr,instance.sell_arr,instance.profit)))
+#
+# pd.set_option('display.max_rows', 1000)
+# pd.set_option('display.max_columns', 20)
 
 # print(instance.df)
 

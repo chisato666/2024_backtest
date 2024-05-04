@@ -259,7 +259,14 @@
               <option value="cross_down" {% if data.sell_type == 'cross_down' %}selected{% endif %}>cross_down</option>
             </select>
 		  </div>
-        <div id="input-form-1" >
+          <div id="input-form-1" >
+    <!-- Input form for Option 1 -->
+   Diff
+    <input type="text" name="in_diff">
+    <!-- Add more input fields as needed -->
+  </div>
+
+        <div id="input-form-3" >
     <!-- Input form for Option 1 -->
             EMA Short
     <input type="text" name="ema_short">
@@ -275,10 +282,10 @@
         <div class="question">
           <p>Target Profit /Stop Loss</p>
           <div class="question-answer">
-                          <label for="radio_1" class="radio"><span>TP</span></label>
+                         <span>TP</span>
 
                       <input type="text" name="tp" />
-            <label for="radio_2" class="radio"><span>SL</span></label>
+            <span>SL</span>
 
           <input type="text" name="sl" />
           </div>
@@ -501,10 +508,14 @@
   $(document).ready(function() {
     $('#option-select').change(function() {
       var selectedOption = $(this).val();
-      if (selectedOption === '3') {
+      if (selectedOption === '1') {
+        $('#input-form-3').hide();
         $('#input-form-1').show();
-      } else if (selectedOption === '1') {
+
+      } else if (selectedOption === '3') {
         $('#input-form-1').hide();
+        $('#input-form-3').show();
+
       }
     });
   });
