@@ -34,6 +34,7 @@ def getdata(symbol,start_date,end_date,period):
 
     return df
 
+
 def backtest_excel(df):
 
     rows = [row for row in df]
@@ -699,18 +700,20 @@ def check_ema_cross(data,check_range,symbol,ema_short,ema_long,cross_direction):
     if len(data) >= ema_long :
         data['ema_short'] = data['close'].ewm(span=ema_short, adjust=False).mean()
         data['ema_long'] = data['close'].ewm(span=ema_long, adjust=False).mean()
+        ma_short = data['close'].rolling(window=ema_short).mean()
+        ma_long = data['close'].rolling(window=ema_long).mean()
 
         ema_short = data['close'].ewm(span=ema_short, adjust=False).mean()
         ema_long = data['close'].ewm(span=ema_long, adjust=False).mean()
         #data.dropna(inplace=True)
 
+        print(ema_short)
+
         for i in range(len(data) - check_range,len(data)):
-
-            # if ((cross_direction=='up' and ([i] > ema_long[i] and ema_short[i-1] <= ema_long[i-1])) or (cross_direction=='down' and ([i] < ema_long[i] and ema_short[i-1] >= ema_long[i-1]))):
-
-            if  ([i] > ema_long[i] and ema_short[i - 1] <= ema_long[i - 1]):
+            #if (((cross_direction=='up' and ((ma_short[i] > ma_long[i]) and (ma_short[i-1] <= ma_long[i-1])))) or ((cross_direction=='down' and ((ma_short[i] < ma_long[i]) and (ma_short[i-1] >= ma_long[i-1]))))):
+            if (((cross_direction=='up' and ((ema_short[i] > ema_long[i]) and (ema_short[i-1] <= ema_long[i-1])))) or ((cross_direction=='down' and ((ema_short[i] < ema_long[i]) and (ema_short[i-1] >= ema_long[i-1]))))):
                 cross_date = data.index[i]
-                print(f" {symbol} : {ema_short} EMA crossed {cross_direction} above {ema_long} EMA on {cross_date}")
+                print(f" {symbol} : i ={data['close'][i]} {ema_short[i-1]} | {ema_long[i-1]} EMA crossed {cross_direction} above {ema_short[i]} | {ema_long[i]} EMA on {cross_date}")
                 url="https://futures.mexc.com/exchange/" + symbol + "?type=linear_swap"
                 symbol_link=f'<a href="{url}" target="_blank">{symbol}</a>'
                 ema_list=[symbol_link,cross_date]
@@ -793,6 +796,59 @@ def backtest_ema(df,tp_percentage,stop_loss_percentage):
     return total_profit, buy_points, sell_points
 
 
+def calculate_scores(data):
+    scores = []
+
+    # 計算移動平均線
+    data['MA'] = data['close'].rolling(window=10).mean()
+
+    # 計算相對強弱指數 (RSI)
+    data['RSI'] = ta.RSI(data['close'], timeperiod=14)
+
+    # 計算布林帶
+    upper_band, middle_band, lower_band = ta.BBANDS(data['close'], timeperiod=20, nbdevup=2, nbdevdn=2)
+    data['Upper Band'] = upper_band
+    data['Middle Band'] = middle_band
+    data['Lower Band'] = lower_band
+
+    # 計算MACD
+    macd, macd_signal, _ = ta.MACD(data['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+    data['MACD'] = macd
+    data['MACD Signal'] = macd_signal
+
+    # 計算ATR
+    data['ATR'] = ta.ATR(data['high'], data['low'], data['close'], timeperiod=14)
+
+    # 計算評分
+    for i in range(len(data)):
+        daily_score = 0
+        if data['MA'].iloc[i] > data['MA'].iloc[i - 1]:
+            daily_score += 1
+        elif data['MA'].iloc[i] < data['MA'].iloc[i - 1]:
+            daily_score -= 1
+
+        if data['RSI'].iloc[i] > 70:
+            daily_score += 1
+        elif data['RSI'].iloc[i] < 30:
+            daily_score -= 1
+
+        if data['close'].iloc[i] > data['Upper Band'].iloc[i]:
+            daily_score -= 1
+        elif data['close'].iloc[i] < data['Lower Band'].iloc[i]:
+            daily_score += 1
+
+        if data['MACD'].iloc[i] > data['MACD Signal'].iloc[i]:
+            daily_score += 1
+        elif data['MACD'].iloc[i] < data['MACD Signal'].iloc[i]:
+            daily_score -= 1
+
+        if data['ATR'].iloc[i] > data['close'].iloc[i] * 0.02:  # 假設閾值為收盤價的2%
+            daily_score += 1
+
+        scores.append(daily_score)
+
+    return scores
+
 # crypto_list=get_symbol_list()
 # print(crypto_list)
 
@@ -819,7 +875,8 @@ periods=['1h','4h','1d']
 sell_points=[]
 buy_points=[]
 
-# df=getdata('BTCUSDT',start_date,end_date,periods)
+#df=getdata('BTCUSDT',start_date,end_date,periods)
+
 # total,sell_points,buy_points=backtest_ema(df,0.2,0.1)
 # plot_backtest(df,buy_points, sell_points)
 

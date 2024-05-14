@@ -289,7 +289,7 @@ def submit_research(request):
                 add_list=[]
                 list=[]
                 for symbol in crypto_list:
-                    df = function.check_symbols_kline(symbol, period, int(ema_long) + 100)
+                    df = function.check_symbols_kline(symbol, period, int(ema_long) )
                     add_list=function.check_ema_cross(df, int(limit), symbol,int(ema_short),int(ema_long),cross_direction)
                     if add_list:
                         rank = function.get_market_cap_rank(symbol.split('_')[0])
@@ -313,6 +313,34 @@ def submit_research(request):
                 print('buyarr',buyarr)
 
                 print("rules 2")
+
+            elif (rules == '3'):
+                crypto_list = function.get_symbol_list()
+                print(crypto_list)
+                # time_step = 'Day1' # 合约的参数：间隔: Min1、Min5、Min15、Min30、Min60、Hour4、Hour8、Day1、Week1、Month1，不填时默认Min1
+
+                interval = "Week1"  # 1-hour candlestick data
+
+                interval = "Day1"  # 1-hour candlestick data
+                count = 0
+                symbol_list=[]
+                add_list = []
+                list = []
+
+                for symbol in crypto_list:
+                    print(symbol)
+                    data = function.check_symbols_kline(symbol, period,  40)
+                    if (len(data)>14):
+                        scores = function.calculate_scores(data)
+                        print( ' scores: ', len(scores), 'data:', len(data))
+                        if scores[len(data)-1] > 1 and scores[len(data)-2] < 0:  # 評分從負數轉正數，買入
+                            symbol_list.append(symbol)
+                            line=('Symbol: ', symbol, ' 日期:', data.index[len(data)-2], '評分:', scores[len(data)-2])
+                            list.append(line)
+                            line2=('Symbol: ', symbol, ' 日期:', data.index[len(data)-1], '評分:', scores[len(data)-1])
+                            list.append(line2)
+
+                            print(line,line2)
 
             # count_profits=((pd.Series(profits) > 0).value_counts())
             # print((pd.Series(profits) + 1).prod())

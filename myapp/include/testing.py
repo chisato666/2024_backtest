@@ -78,6 +78,50 @@ for i in range(len(data)):
 #data = pd.read_csv('stock_data.csv')
 #     # time_step = 'Day1' # 合约的参数：间隔: Min1、Min5、Min15、Min30、Min60、Hour4、Hour8、Day1、Week1、Month1，不填时默认Min1
 
+def backtest(data):
+    positions = []  # 儲存每一天的持倉狀態（1表示買入，-1表示賣出，0表示觀望）
+    buy_date = None  # 買入日期
+    buy_price = None  # 買入價格
+    total_profit = 0  # 總利潤
+
+    # 根據評分變動計算持倉狀態
+    for i in range(1, len(data)):
+        if buy_price is None:  # 沒有持倉
+            if data['Score'].iloc[i] > 0 and data['Score'].iloc[i - 1] < 0:  # 評分從負數轉正數，買入
+                positions.append(1)
+                buy_date = data['Date'].iloc[i]
+                buy_price = data['Close'].iloc[i]
+        else:  # 有持倉
+            if data['Close'].iloc[i] >= buy_price * 1.1:  # 股價達到10%的利潤目標，賣出
+                positions.append(-1)
+                total_profit += buy_price * 0.1  # 計算利潤
+                sell_date = data['Date'].iloc[i]
+                print(f"賣出日期：{sell_date}，利潤：{buy_price * 0.1}")
+                buy_date = None
+                buy_price = None
+            elif data['Close'].iloc[i] <= buy_price * 0.95:  # 股價跌破5%的停損閾值，賣出
+                positions.append(-1)
+                total_profit += buy_price * -0.05  # 計算利潤
+                sell_date = data['Date'].iloc[i]
+                print(f"賣出日期：{sell_date}，利潤：{buy_price * -0.05}")
+                buy_date = None
+                buy_price = None
+            else:  # 股價未達到利潤目標或停損閾值，持續持倉
+                positions.append(1)
+
+    return total_profit
 
 
+# 讀取股票價格數據（假設為CSV文件），並轉換為DataFrame
+data = pd.read_csv('stock_data.csv')
 
+# 假設只考慮最近三個月的K線資料
+start_date = pd.to_datetime('2024-02-01')
+end_date = pd.to_datetime('2024-04-30')
+data = data[(data['Date'] >= start_date) & (data['Date'] <= end_date)]
+
+# 呼叫 backtest 函數進行回測
+total_profit = backtest(data)
+
+# 輸出總利潤
+print('總利潤:', total_profit)
