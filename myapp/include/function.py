@@ -671,6 +671,7 @@ def check_symbols_kline(symbol, interval, limit):
     df=[]
     try:
         df = pd.DataFrame(data['data'], columns=['time', 'open', 'low', 'high', 'close'])
+        df['ret'] = df.close.pct_change()
         df.index = pd.to_datetime(df.time, unit='s', utc=True).map(lambda x: x.tz_convert('Asia/Hong_Kong'))
     except Exception as error:
         print(symbol,'error ', error)
