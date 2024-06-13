@@ -28,14 +28,14 @@ passwd = "Socool666"
 
 
 # Connect to PostgreSQL database
-# mydb = mysql.connector.connect(
-#     host=host,
-#     user=user,
-#     passwd=passwd,
-#     database=database
-# )
+mydb = mysql.connector.connect(
+    host=host,
+    user=user,
+    passwd=passwd,
+    database=database
+)
 
-#db = mydb.cursor()
+db = mydb.cursor()
 
 global last_email_time , last_alert_timestamps
 
@@ -75,7 +75,7 @@ def send_mail(msg):
     email_address = 'bitcontrol2018'
     email_password = 'xgvgtothglqfqhag'
     recipient_address = 'waishing1977@gmail.com'
-    message = MIMEText('Increase 0.5%  on BTC/ETH')
+    message = MIMEText('Alert message')
     message['From'] = email_address
     message['To'] = recipient_address
     message['Subject'] = msg
@@ -85,13 +85,19 @@ def send_mail(msg):
         smtp.send_message(message)
 
 
-def get_current_price(symbol):
-    url = "https://api.binance.com/api/v3/ticker/price"
+def get_current_price_mexc(symbol):
+    url = "https://contract.mexc.com/api/v1/contract/ticker/"
     params = {'symbol': symbol}
     response = requests.get(url, params=params)
     data = response.json()
-    return float(data['price'])
+    return float(data['data']['lastPrice'])
 
+def get_current_price(symbol):
+    url = "https://api.binance.com/api/v3/ticker/24hr"
+    params = {'symbol': symbol}
+    response = requests.get(url, params=params)
+    data = response.json()
+    return float(data['lastPrice'])
 
 def get_24hr_high(symbol):
     url = "https://api.binance.com/api/v3/ticker/24hr"
@@ -100,7 +106,7 @@ def get_24hr_high(symbol):
     data = response.json()
     return float(data['highPrice']), float(data['lowPrice'])
 
-def get_24hr_high2(symbol):
+def get_24hr_high_mexc(symbol):
     url = "https://contract.mexc.com/api/v1/contract/ticker/"
     params = {'symbol': symbol}
     response = requests.get(url, params=params)
@@ -108,7 +114,7 @@ def get_24hr_high2(symbol):
     return float(data['data']['high24Price']), float(data['data']['lower24Price'])
 
 
-def check_percent_change(symbol, threshold):
+def check_percent_change(symbol, threshold, period):
     # Define the percentage increase threshold
     isAlert = False
     max_threshold = threshold
@@ -118,7 +124,7 @@ def check_percent_change(symbol, threshold):
     price = float(ticker['lastPrice'])
     dt = datetime.now()
     # Get the price 1 minute ago
-    klines = client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE)
+    klines = client.get_klines(symbol=symbol, interval=period)
     prev_price = float(klines[-2][4])
 
     # Calculate the percentage increase
@@ -128,10 +134,10 @@ def check_percent_change(symbol, threshold):
     # Check if the percentage increase is above the threshold
     if (percent_increase >= max_threshold):
         isAlert = True
-        message = (f"ALERT: {symbol} price {price} increased by {percent_increase:.2f}% within 1 minute")
+        message = (f"ALERT: {symbol} price {price} threshold {threshold}% increased by {percent_increase:.2f}% within {period}")
     elif (percent_increase <= min_threshold):
         isAlert = True
-        message = (f"ALERT: {symbol} price {price} decreased by {percent_increase:.2f}% within 1 minute")
+        message = (f"ALERT: {symbol} price {price} threshold {threshold}%  decreased by {percent_increase:.2f}% within {period}")
     else:
         message = ""
         isAlert = False
@@ -190,7 +196,7 @@ def check_cond(symbol,interval,period):
 
     message=f"Symbol: {symbol}, Interval: {interval}, Period: {period} \n"
     cond_count=0
-    threshold=0.05
+    threshold=0.1
     # Get the Klines data for the last 2 hours
     klines = client.get_historical_klines(symbol, interval, period)
     #frame = pd.DataFrame(client.get_historical_klines(symbol,period,start,end))
@@ -234,7 +240,8 @@ def check_cond(symbol,interval,period):
 
     # Get the last price from the Klines data
 
-    data=getdata(symbol, "1d", "1 year ago UTC","")
+    #data=getdata(symbol, "1d", "1 year ago UTC","")
+    data = calc_indicators(symbol, "1d", "1 year ago UTC", "")
 
     ma_100d =data.iloc[[-1]]['ma_100']
 
@@ -247,31 +254,43 @@ def check_cond(symbol,interval,period):
     #  Check if the conditions are met
 
 
-    # if last_rsi > 70:
-    #     message= message + "RSI is great than 70 \n"
-    #     cond_count=cond_count+1
-    # if last_rsi < 30:
-    #     message = message + "RSI is less than 30 \n"
-    #     cond_count=cond_count+1
-    # if last_price < last_bb_lower:
-    #     message = message + "Current price is less than the lower Bollinger Band. \n"
-    #     cond_count=cond_count+1
-    # if last_price > last_bb_upper:
-    #     message = message + "Current price is greater than the upper Bollinger Band. \n"
-    #     cond_count=cond_count+1
+    if last_rsi > 70:
+        message= message + "RSI is great than 70 \n"
+        cond_count=cond_count+1
+    if last_rsi < 30:
+        message = message + "RSI is less than 30 \n"
+        cond_count=cond_count+1
+    if last_price < last_bb_lower:
+        message = message + "Current price is less than the lower Bollinger Band. \n"
+        cond_count=cond_count+1
+    if last_price > last_bb_upper:
+        message = message + "Current price is greater than the upper Bollinger Band. \n"
+        cond_count=cond_count+1
+
+    if percent_increase >=threshold:
+        message = message + "Current price percent increased." + str(percent_increase) + " \n"
+        cond_count = cond_count + 1
+
+    if percent_increase <= -threshold:
+        message = message + "Current price percent decreased." + str(percent_increase) + " \n"
+        cond_count = cond_count + 1
+
 
     if last_price > ma_30:
         message = message + "Current price is greater than ma30. \n"
         cond_count = cond_count + 1
     if percent_near_high < max_threshold:
-        message = message + "Current price is near the highest price. \n"
+        message = message + "Current price is near the 24hr highest price. \n"
         cond_count = cond_count + 1
     # if percent_near_low < max_threshold:
     #     message = message + "Current price is near the lowest price. \n"
     #     cond_count = cond_count + 1
 
+
     if  cond_count==0:
         message= message + "Conditions not met."
+
+    #print(f"RSI  {last_rsi}  prev_price {prev_price} Last Price {last_price} Last bb lower {last_bb_lower}  Last bb upper {last_bb_upper} percent_near_high {percent_near_high} percent_increase {percent_increase}")
 
     return cond_count,message
 
@@ -284,7 +303,7 @@ def check_all():
     print(dt)
     message=""
     isAlert = False
-    symbols = ['ETHUSDT', 'BTCUSDT', 'SHIBUSDT', 'APEUSDT', 'THETAUSDT', 'MKRUSDT', 'LINKUSDT', 'ARKMUSDT', 'DOGEUSDT']
+    symbols = ['ETHUSDT', 'BTCUSDT']
     symbol_last_sent_time = {symbol: None for symbol in symbols}
 
     for symbol in symbols:
@@ -293,7 +312,7 @@ def check_all():
         message = ""
         current_price = get_current_price(symbol)
         last_alert_time= last_alert_timestamps.get(symbol,0)
-        hr_high, hr_low = get_24hr_high2(symbol)
+        hr_high, hr_low = get_24hr_high(symbol)
 
         try:
             data = calc_indicators(symbol, "1d", "1 year ago UTC", "")
@@ -303,7 +322,7 @@ def check_all():
             ma_150d = data.iloc[[-1]]['ma_150']
 
             ma_200d = data.iloc[[-1]]['ma_200']
-            print(ma_100d, ma_150d, ma_200d)
+            #print(ma_100d, ma_150d, ma_200d)
             if current_price >= hr_high:
                 isAlert = True
                 count=count+1
@@ -338,14 +357,15 @@ def check_all():
             if count >1:
                 print("isAert ", message)
                 sent_symbol=symbol
-                # db.execute("INSERT INTO ALERT_LOG (LOG) VALUES (%s)", (message))
-                # mydb.commit()
+
 
 
                 if  symbol_last_sent_time[symbol] is None or time.time() - symbol_last_sent_time[symbol] > 3600:
                     message = message + str(time.time())
                     send_mail(message)
                     symbol_last_sent_time[symbol] = time.time()
+                    db.execute("INSERT INTO ALERT_LOG (LOG) VALUES (%s)", (message))
+                    mydb.commit()
 
                 # if current_time - last_alert_time > email_interval:
                 #     message = message + str(last_alert_time) + str(current_time)
@@ -357,8 +377,11 @@ def check_all():
             print("data error")
 
 
-        #count, message2 = check_cond(symbol, "1h", "50 hour ago UTC")
-        #message = message + message2
+
+
+# print(check_percent_change('BTCUSDT', 0.05,     Client.KLINE_INTERVAL_1MINUTE))
+#
+# print(check_percent_change('BTCUSDT', 0.05,     Client.KLINE_INTERVAL_1HOUR))
 
 
 
@@ -368,9 +391,60 @@ def check_all():
 # print(data.iloc[-1:])
 
 
+# symbol='BTCUSDT'
+# count, message2 = check_cond(symbol, "1h", "60 hour ago UTC")
+# print(message2,count)
+# message='testing'
+# db.execute("INSERT INTO `ALERT_LOG` (`ID`, `SYMBOL`, `RULES`, `LOG`, `CREATED_DATE`) VALUES (NULL, '', '', , current_timestamp())")
+# mydb.commit()
+
+# message2='11221'
+# symbol='btc'
+# count=3
+# query = "INSERT INTO ALERT_LOG (COUNT, SYMBOL, LOG) VALUES (%s, %s, %s)"
+# val = [count,symbol, message2]
+# db.execute(query, val)
+# mydb.commit()
+
+# sql = "INSERT INTO customers (name, address) VALUES (%s, %s)"
+# val = ("John", "Highway 21")
+# mycursor.execute(sql, val)
+
+
+
+
+symbol_last_sent_time = {symbol: None for symbol in symbols}
+
+
 while True:
-     check_all()
-#
-#     # check_alert()
-     time.sleep(10)
+
+    symbols = ['ETHUSDT', 'BTCUSDT','DOGEUSDT','RNDRUSDT']
+
+
+    for symbol in symbols:
+        # interval = c("1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h",
+        #             "1d", "3d", "1w", "1M"),
+        count, message2 = check_cond(symbol, "15m", "10 hour ago UTC")
+        print(message2,count)
+
+        if count > 1:
+            print("isAert ", message2)
+            sent_symbol = symbol
+
+            if symbol_last_sent_time[symbol] is None or time.time() - symbol_last_sent_time[symbol] > 3600:
+                message2 = message2 + str(time.time())
+                send_mail(message2)
+                symbol_last_sent_time[symbol] = time.time()
+
+                query = "INSERT INTO ALERT_LOG (COUNT, SYMBOL, LOG) VALUES (%s, %s, %s)"
+                val = [count,symbol, message2]
+                db.execute(query, val)
+                mydb.commit()
+
+
+    # check_all()
+
+    time.sleep(10)
+
+
 # Note that this code will run indefinitely until you stop it manually. You can stop the program by pressing `Ctrl+C` in theterminal or console where it is running. Also, make sure you have the necessary API keys and permissions to access the Binance exchange before running this code.
