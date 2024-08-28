@@ -7,6 +7,30 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import function
 
+
+def compare_columns(df1, col_a, df2, col_b):
+    """
+    Compares two columns from different dataframes and returns the count of rows where col_a > col_b.
+
+    Args:
+        df1 (pandas.DataFrame): The first dataframe.
+        col_a (str): The name of the column to compare from df1.
+        df2 (pandas.DataFrame): The second dataframe.
+        col_b (str): The name of the column to compare from df2.
+
+    Returns:
+        int: The count of rows where col_a > col_b.
+    """
+    # Create a new dataframe with the columns to be compared
+    df = pd.DataFrame({col_a: df1[col_a], col_b: df2[col_b]})
+
+    # Compare the columns and get the count
+    df['comparison'] = 0
+    df.loc[df[col_a] > df[col_b], 'comparison'] = 1
+    df.loc[df[col_a] <= df[col_b], 'comparison'] = -1
+    return df['comparison'].sum()
+
+
 # Define the cryptocurrencies to plot
 cryptos = ["BTC_USDT", "ETH_USDT", "SOL_USDT"]
 
@@ -44,6 +68,20 @@ data = {}
 #
 #     df = function.check_symbols_kline(crypto, time_interval, limit)
 
+crypto_list=function.get_symbol_list()
+print(crypto_list)
+
+
+# symbol='BTC_USDT'
+# interval = "Day1"  # 1-hour candlestick data
+# limit=80
+# count=0
+# ema_list=[]
+# add_list=[]
+
+for symbol in crypto_list:
+    df = function.check_symbols_kline(symbol, time_interval, limit)
+    print(symbol,df['ret'].sum())
 
 df = function.check_symbols_kline('BTC_USDT', time_interval, limit)
 # Create a pandas DataFrame from the data
@@ -51,21 +89,33 @@ df = function.check_symbols_kline('BTC_USDT', time_interval, limit)
 plt.figure(figsize=(14, 8))
 
 plt.plot(df.index, df['ret'], label='BTC Price %')
-df = function.check_symbols_kline('ETH_USDT', time_interval, limit)
-plt.plot(df.index, df['ret'], label='ETH Price %')
-df = function.check_symbols_kline('SOL_USDT', time_interval, limit)
-plt.plot(df.index, df['ret'], label='SOL Price %')
-df = function.check_symbols_kline('RNDR_USDT', time_interval, limit)
-plt.plot(df.index, df['ret'], label='RNDR Price %')
 
+df2 = function.check_symbols_kline('ETH_USDT', time_interval, limit)
+plt.plot(df2.index, df2['ret'], label='ETH Price %')
+
+
+df3 = function.check_symbols_kline('SOL_USDT', time_interval, limit)
+plt.plot(df3.index, df3['ret'], label='SOL Price %')
+
+df4 = function.check_symbols_kline('RNDR_USDT', time_interval, limit)
+plt.plot(df4.index, df4['ret'], label='RNDR Price %')
+
+print((df['ret'].sum(),df2['ret'].sum(),df3['ret'].sum(),df4['ret'].sum()))
+
+
+
+#total=df['ret'].prod()
+#print(total)
 # Plot the graph
 #df.plot(figsize=(12, 6))
+
+
 plt.title(f"Cryptocurrency Price Change Percentages ({time_interval.capitalize()})")
 plt.xlabel("Date")
 plt.ylabel("Percentage Change")
 plt.grid(True)
 plt.legend()
-plt.show()
+#plt.show()
 # ```
 #
 # The main changes are:

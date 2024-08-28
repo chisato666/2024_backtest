@@ -255,7 +255,7 @@ def get_rules3(df,tp_percentage,stop_loss_percentage,moving_sl,sell_type, over_e
     pro_list = ((pd.Series(profits) ).cumprod())
     # total=((pd.Series(profits) + 1).cumprod())
     pro_total = (pd.Series(profits) ).prod()
-
+    print("DF_BTC HERE",df_btc)
     plot_backtest(df_btc, buy_points, sell_points)
 
     return total_profit,pro_list,pro_count,all_arr,df
