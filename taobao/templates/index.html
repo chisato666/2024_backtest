@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Images</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .search-container input,
+        .search-container select,
+        .search-container button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #007BFF;
+            font-size: 16px;
+        }
+        .search-container button {
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+        .search-container button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        img {
+            max-width: 100px;
+            height: auto;
+            border-radius: 5px;
+        }
+        .pagination {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .pagination a {
+            margin: 0 5px;
+            padding: 8px 12px;
+            text-decoration: none;
+            color: #007BFF;
+            border: 1px solid #007BFF;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .pagination a:hover {
+            background-color: #007BFF;
+            color: white;
+        }
+        .featured-image {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .featured-image img {
+            max-width: 300px;
+            height: auto;
+            border: 2px solid #007BFF;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Product Images</h1>
+
+    <!-- Search Form -->
+    <div class="search-container">
+        <form method="GET">
+            <input type="text" name="search" placeholder="Search by PRODUCT_ID or SHEET_NAME" value="{{ request.args.get('search', '') }}">
+            <select name="column">
+                <option value="PRODUCT_ID" {% if request.args.get('column') == 'PRODUCT_ID' %}selected{% endif %}>PRODUCT_ID</option>
+                <option value="SHEET_NAME" {% if request.args.get('column') == 'SHEET_NAME' %}selected{% endif %}>SHEET_NAME</option>
+            </select>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <!-- Display First Photo -->
+    {% if results %}
+
+
+    <table>
+        <tr>
+              <th width="15%">Image</th>
+                        <th width="10%">Status</th>
+            <th width="10%">Cost</th>
+            <th>Created Date</th>
+            <th>Updated Date</th>
+
+            <th width="20%">Title</th>
+            <th>URL</th>
+
+        </tr>
+        {% for row in results %}
+            <tr>
+                           <td>
+                    {% if row[4] %}
+                        <img src="{{ row[4] }}" alt="{{ row[0] }} Image">
+                    {% else %}
+                        No Image
+                    {% endif %}
+                </td>
+                                <td>{{ row[1] }}</td>
+                <td>{{ row[3] }}</td>
+                <td>{{ row[5] }}</td>
+                <td>{% if row[6] > row[5] %} YES {{ row[6] }} {% endif %} </td>
+
+                <td>{{ row[0] }}</td>
+                <td><a href="{{ row[2] }}" target="_blank">{{ row[2] }}</a></td>
+
+            </tr>
+        {% endfor %}
+    </table>
+
+    <div class="pagination">
+        {% set total_pages = (total_rows + rows_per_page - 1) // rows_per_page %}
+        {% for p in range(1, total_pages + 1) %}
+            <a href="?page={{ p }}&search={{ request.args.get('search', '') }}&column={{ request.args.get('column', 'PRODUCT_ID') }}">{{ p }}</a>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <p>No results found.</p>
+    {% endif %}
+</body>
+</html>
