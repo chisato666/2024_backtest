@@ -1,36 +1,269 @@
-function fetchTypeDetails() {
-    const selectedTypeName = document.getElementById('typeSelect').value;
-
-    fetch('/fetch_types')  // Fetch types again to get the details
-        .then(response => response.json())
-        .then(data => {
-            const selectedType = data.find(type => type.name === selectedTypeName);
-            if (selectedType) {
-                document.getElementById('modalTitle').value = selectedType.title;
-                document.getElementById('modalBody').value = selectedType.body;
-                document.getElementById('modalTags').value = selectedType.tags;
-            } else {
-                // Clear fields if no type is selected
-                document.getElementById('modalTitle').value = '';
-                document.getElementById('modalBody').value = '';
-                document.getElementById('modalTags').value = '';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Images</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .search-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        img {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin: 0 auto;
+            display: block;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input[name^="title-"] {
+            width: 290px; /* Increased width for title */
+        }
+        input[name^="tags-"] {
+            width: 150px; /* Decreased width for tags */
+        }
+        input[name^="price-"] {
+            width: 80px; /* Width for price */
+        }
+        textarea {
+            height: 100px; /* Increased height for body */
+            resize: vertical;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 8px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            img {
+                max-width: 80px;
+                max-height: 80px;
             }
-        })
-        .catch(error => console.error('Error fetching type details:', error));
-}
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Product Images</h1>
 
-function assignValues() {
-    const title = document.getElementById('modalTitle').value;
-    const body = document.getElementById('modalBody').value;
-    const tags = document.getElementById('modalTags').value;
+    <div class="search-container">
+        <form method="GET">
+            <select name="sheet_name">
+                <option value="">Select SHEET_NAME</option>
+                {% for sheet in sheet_names %}
+                    <option value="{{ sheet[0] }}" {% if sheet[0] == request.args.get('sheet_name') %}selected{% endif %}>{{ sheet[0] }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="product_id" placeholder="Search by PRODUCT_ID" value="{{ request.args.get('product_id', '') }}">
+            <button type="submit">Search</button>
+        </form>
+    </div>
 
-    // Prepend PRODUCT_ID to the TITLE
-    const newTitle = `${currentRowId} - ${title}`;
+    {% if results %}
+    <form method="POST" action="/update">
+        <div class="update-button-container">
+            <button type="submit">Update All</button>
+        </div>
+        <table>
+            <tr>
+                <th>Image</th>
+                <th width="300">Title</th>
+                <th>Cost</th>
+                <th width="200">Tags</th>
+                <th>Body</th>
+                <th>Status</th>
+                <th>URL</th>
+                <th>Select</th>
+            </tr>
+            {% for row in results %}
+                <tr>
+                    <td>
+                        {% if row[6] %}
+                            {% set photos = row[6].split(',') %}
+                            <img src="{{ photos[0].strip() }}" alt="{{ row[1] }} Image">
+                        {% else %}
+                            No Image
+                        {% endif %}
+                    </td>
+                    <td>
+                        <input type="hidden" name="id-{{ row[0] }}" value="{{ row[0] }}">
+                        <input type="text" name="title-{{ row[0] }}" value="{{ row[1] }}" size="40">
+                    </td>
+                    <td>
+                        <input type="text" name="price-{{ row[0] }}" class="small-input" value="{{ row[4] }}">
+                    </td>
+                    <td>
+                        <input type="text" name="tags-{{ row[0] }}" class="tags-input" value="{{ row[7] }}">
+                    </td>
+                    <td>
+                        <textarea name="body-{{ row[0] }}">{{ row[5] }}</textarea>
+                    </td>
+                    <td>{{ row[2] }}</td> <!-- Status -->
+                    <td>
+                        <a href="{{ row[3] }}" target="_blank">URL</a>
+                    </td>
+                    <td>
+                        <button type="button" onclick="openModal('{{ row[0] }}', '{{ row[1] }}', '{{ row[4] }}')">Select</button> <!-- Open modal -->
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </form>
+    {% else %}
+        <p>No results found.</p>
+    {% endif %}
 
-    // Assign values to the corresponding inputs
-    document.querySelector(`input[name="title-${currentRowId}"]`).value = newTitle;
-    document.querySelector(`textarea[name="body-${currentRowId}"]`).value = body;
-    document.querySelector(`input[name="tags-${currentRowId}"]`).value = tags;
+    <!-- Modal for selecting TYPE_NAME -->
+    <div id="typeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Select Product Type</h2>
+            <select id="typeSelect" onchange="fetchTypeDetails()">
+                <option value="">Select TYPE_NAME</option>
+                <!-- Options will be populated here via JavaScript -->
+            </select>
+            <div id="typeDetails" style="margin-top: 20px;">
+                <h4>Details:</h4>
+                <label>Title: <input type="text" id="modalTitle" readonly></label>
+                <label>Body: <textarea id="modalBody" readonly></textarea></label>
+                <label>Tags: <input type="text" id="modalTags" readonly></label>
+            </div>
+            <button onclick="assignValues()">OK</button>
+        </div>
+    </div>
 
-    closeModal();
-}
+    <script>
+        let currentRowId = '';
+        let currentPrice = '';
+
+        function openModal(productId, productTitle, productPrice) {
+            currentRowId = productId; // Store the PRODUCT_ID
+            currentPrice = productPrice; // Store the PRODUCT_PRICE
+            document.getElementById('typeModal').style.display = 'block';
+            fetchProductTypes();
+        }
+
+        function closeModal() {
+            document.getElementById('typeModal').style.display = 'none';
+        }
+
+        function fetchProductTypes() {
+            fetch('/fetch_types')
+                .then(response => response.json())
+                .then(data => {
+                    const typeSelect = document.getElementById('typeSelect');
+                    typeSelect.innerHTML = '<option value="">TYPE NAME</option>'; // Reset options
+                    data.forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type.name; // Using TYPE_NAME as value
+                        option.textContent = type.name;
+                        typeSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error fetching product types:', error));
+        }
+
+        function fetchTypeDetails() {
+            const selectedTypeName = document.getElementById('typeSelect').value;
+
+            fetch('/fetch_types')  // Fetch types again to get the details
+                .then(response => response.json())
+                .then(data => {
+                    const selectedType = data.find(type => type.name === selectedTypeName);
+                    if (selectedType) {
+                        document.getElementById('modalTitle').value = selectedType.title;
+                        document.getElementById('modalBody').value = selectedType.body;
+                        document.getElementById('modalTags').value = selectedType.tags;
+                    } else {
+                        // Clear fields if no type is selected
+                        document.getElementById('modalTitle').value = '';
+                        document.getElementById('modalBody').value = '';
+                        document.getElementById('modalTags').value = '';
+                    }
+                })
+                .catch(error => console.error('Error fetching type details:', error));
+        }
+
+        function assignValues() {
+            const title = document.getElementById('modalTitle').value;
+            const body = document.getElementById('modalBody').value;
+            const tags = document.getElementById('modalTags').value;
+
+            // Prepend PRODUCT_ID and PRICE to the BODY
+            const newBody = `ID: ${currentRowId}-${currentPrice}\n\n${body}`;
+
+            // Prepend PRODUCT_ID to the TITLE
+            const newTitle = `${currentRowId} - ${title}`;
+
+            document.querySelector(`input[name="title-${currentRowId}"]`).value = newTitle;
+            document.querySelector(`textarea[name="body-${currentRowId}"]`).value = newBody;
+            document.querySelector(`input[name="tags-${currentRowId}"]`).value = tags;
+
+            closeModal();
+        }
+    </script>
+</body>
+</html>
