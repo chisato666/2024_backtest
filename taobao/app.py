@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 import mysql.connector
 from mysql.connector import pooling
 
@@ -6,14 +6,11 @@ app = Flask(__name__)
 
 # Database configuration
 db_config = {
-    'host': 'hkwaishing.com',  # e.g., 'localhost'
-    'user': 'waishing_trendy',  # e.g., 'root'
-    'password': 'Socool666',  # your database password
-    'database': 'waishing_binance'  # your database name
+    'host': 'hkwaishing.com',
+    'user': 'waishing_trendy',
+    'password': 'Socool666',  # Use an environment variable for security
+    'database': 'waishing_binance'
 }
-
-
-
 
 # Create a connection pool
 connection_pool = pooling.MySQLConnectionPool(
@@ -27,38 +24,43 @@ def index():
     page = request.args.get('page', 1, type=int)
     rows_per_page = 20
     offset = (page - 1) * rows_per_page
-    search = request.args.get('search', '')
-    column = request.args.get('column', 'PRODUCT_ID')
-
-    # Validate the column input
-    valid_columns = ['PRODUCT_ID', 'SHEET_NAME']
-    if column not in valid_columns:
-        column = 'PRODUCT_ID'  # Fallback to a default column
+    selected_sheet = request.args.get('sheet_name', '')
+    product_id = request.args.get('product_id', '')
 
     try:
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
-        # Build the base query
-        query = "SELECT TITLE, STATUS, URL, COST, PHOTO, CREATED_DATE, UPDATED_DATE FROM PRODUCT"
+        # Fetch unique SHEET_NAMEs for the dropdown
+        cursor.execute("SELECT DISTINCT SHEET_NAME FROM PRODUCT")
+        sheet_names = cursor.fetchall()
+
+        # Build the base query including TAGS
+        query = """
+        SELECT product_id, title, status, url, cost, body, photo, tags, created_date, updated_date 
+        FROM PRODUCT
+        """
         count_query = "SELECT COUNT(*) FROM PRODUCT"
         params = []
 
-        # If searching, add conditions
-        if search:
-            query += f" WHERE {column} LIKE %s"
-            count_query += f" WHERE {column} LIKE %s"
-            params.append(f'%{search}%')
+        if product_id:
+            query += " WHERE product_id LIKE %s"
+            count_query += " WHERE product_id LIKE %s"
+            params.append(f'%{product_id}%')
+        elif selected_sheet:
+            query += " WHERE SHEET_NAME = %s"
+            count_query += " WHERE SHEET_NAME = %s"
+            params.append(selected_sheet)
 
-        # Execute the count query first to get the total rows
-        cursor.execute(count_query, params if search else None)
+        cursor.execute(count_query, params if params else None)
         total_rows = cursor.fetchone()[0]
 
-        # Add pagination to the main query
+        if page < 1:
+            page = 1
+
         query += " LIMIT %s OFFSET %s"
         params.extend([rows_per_page, offset])
 
-        # Execute the main query
         cursor.execute(query, params)
         results = cursor.fetchall()
 
@@ -68,14 +70,66 @@ def index():
         cursor.close()
         connection.close()
 
-    # Process the results to extract the first photo
-    for index, row in enumerate(results):
-        if row[4]:  # If the PHOTO column is not empty
-            photos = row[4].split(',')  # Split by comma
-            results[index] = (row[0], row[1], row[2], row[3], photos[0].strip(),row[5],row[6])  # Include URL and COST
+    return render_template('index2.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names)
 
-    return render_template('index.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page)
+@app.route('/update', methods=['POST'])
+def update_product():
+    print("Received POST request to update products.")
+    print("Form data:", request.form)  # Print all form data for debugging
 
+    try:
+        connection = connection_pool.get_connection()
+        cursor = connection.cursor()
+
+        update_query = """
+        UPDATE PRODUCT
+        SET title = %s, cost = %s, body = %s, tags = %s
+        WHERE product_id = %s
+        """
+
+        for key in request.form.keys():
+            if key.startswith("id-"):
+                product_id = request.form.get(key)
+
+                title = request.form.get(f"title-{product_id}")
+                price = request.form.get(f"price-{product_id}")
+                body = request.form.get(f"body-{product_id}")
+                tags = request.form.get(f"tags-{product_id}")
+
+                print(f"Updating Product ID: {product_id}, Title: {title}, Price: {price}, Body: {body}, Tags: {tags}")
+                cursor.execute(update_query, (title, price, body, tags, product_id))
+
+        connection.commit()
+        print("All products updated successfully.")
+
+    except mysql.connector.Error as e:
+        print(f"Database error: {e}")
+        return f"Error: {e}"
+    finally:
+        cursor.close()
+        connection.close()
+
+    return redirect(url_for('index'))
+
+@app.route('/fetch_types', methods=['GET'])
+def fetch_types():
+    try:
+        connection = connection_pool.get_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("SELECT TYPE_NAME, TITLE, BODY, TAGS FROM PRODUCT_TYPE")
+        types = cursor.fetchall()
+
+        # Convert to a list of dictionaries for easier access in JavaScript
+        types_list = [{'name': row[0], 'title': row[1], 'body': row[2], 'tags': row[3]} for row in types]
+
+        return jsonify(types_list)
+
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
