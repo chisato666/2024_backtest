@@ -54,7 +54,7 @@
             width: 290px; /* Increased width for title */
         }
         input[name^="tags-"] {
-            width: 150px; /* Width for tags */
+            width: 150px; /* Decreased width for tags */
         }
         input[name^="price-"] {
             width: 80px; /* Width for price */
@@ -95,43 +95,6 @@
             text-decoration: none;
             cursor: pointer;
         }
-        .pagination {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .pagination button {
-            margin: 0 5px;
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .pagination button.disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-
-
-.pagination select {
-    margin: 0 10px;
-}
-
-.pagination a {
-    margin: 0 5px;
-    padding: 8px 12px;
-    background-color: #4CAF50;
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-}
-
-.pagination a:hover {
-    background-color: #45a049;
-}
-
         @media (max-width: 768px) {
             img {
                 max-width: 80px;
@@ -141,12 +104,10 @@
                 padding: 8px;
             }
         }
-
-
     </style>
 </head>
 <body>
- <h1>Product Images</h1>
+    <h1>Product Images</h1>
 
     <div class="search-container">
         <form method="GET">
@@ -170,12 +131,12 @@
             <tr>
                 <th>Image</th>
                 <th width="300">Title</th>
-                <th width="100"> Type ID</th> <!-- Changed from Cost to Type ID -->
-                <th width="200">Tags</th>
-                <th>Body</th>
+                <th>Cost</th>
+                <th width="200">Create Date</th>
+                <th>Update Date</th>
                 <th>Status</th>
                 <th>URL</th>
-                <th>Select</th>
+                <th>Updated</th>
             </tr>
             {% for row in results %}
                 <tr>
@@ -190,71 +151,41 @@
                     <td>
                         <input type="hidden" name="id-{{ row[0] }}" value="{{ row[0] }}">
                         <input type="text" name="title-{{ row[0] }}" value="{{ row[1] }}" size="40">
-                            <input type="hidden" name="price-{{ row[0] }}" value="{{ row[4] }}"> <!-- Assuming row[4] holds the COST -->
+                    </td>
+                    <td>
+                        <input type="text" name="price-{{ row[0] }}" class="small-input" value="{{ row[4] }}">
+                    </td>
 
-                    </td>
-                    <td>
-                        <input type="text" name="type_id-{{ row[0] }}" class="small-input" value="{{ row[10] }}"> <!-- Assuming row[8] holds the TYPE_ID -->
-                    </td>
-                    <td>
-                        <input type="text" name="tags-{{ row[0] }}" class="tags-input" value="{{ row[7] }}">
-                    </td>
-                    <td>
-                        <textarea name="body-{{ row[0] }}">{{ row[5] }}</textarea>
-                    </td>
+                                        <td>{{ row[8] }}</td> <!-- Created -->
+
+                                    <td>{{ row[9] }}</td> <!-- Updated -->
+
                     <td>{{ row[2] }}</td> <!-- Status -->
-                                        <td> <a href="{{ row[3] }}">URL</a></td> <!-- URL -->
-
                     <td>
-                        <button type="button" onclick="openModal('{{ row[0] }}', '{{ row[1] }}')">Select</button>
+                        <a href="{{ row[3] }}" target="_blank">URL</a>
+                    </td>
+                    <td>
+                        <button type="button" onclick="openModal('{{ row[0] }}', '{{ row[1] }}', '{{ row[4] }}')">Select</button> <!-- Open modal -->
                     </td>
                 </tr>
             {% endfor %}
         </table>
     </form>
-
-<div class="pagination">
-    <form method="GET" action="">
-        <label for="per-page">Items per page:</label>
-        <select name="per_page" id="per-page" onchange="this.form.submit()">
-            <option value="20" {% if rows_per_page == 20 %}selected{% endif %}>20</option>
-            <option value="50" {% if rows_per_page == 50 %}selected{% endif %}>50</option>
-        </select>
-    </form>
-
-    <div>
-        {% if page > 1 %}
-            <a href="?page={{ page - 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}">Previous</a>
-        {% endif %}
-
-        <span>Page {{ page }} of {{ total_pages }}</span>
-
-        {% if page < total_pages %}
-            <a href="?page={{ page + 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}">Next</a>
-        {% endif %}
-    </div>
-</div>
-
     {% else %}
         <p>No results found.</p>
     {% endif %}
 
-    <!-- Modal for selecting BRAND_NAME and TYPE_NAME -->
+    <!-- Modal for selecting TYPE_NAME -->
     <div id="typeModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
-            <h2>Select Brand and Type</h2>
-            <select id="brandSelect" onchange="fetchTypeDetails()">
-                <option value="">Select BRAND_NAME</option>
-                <!-- Options will be populated here via JavaScript -->
-            </select>
-            <select id="typeSelect" onchange="loadDetails()">
+            <h2>Select Product Type</h2>
+            <select id="typeSelect" onchange="fetchTypeDetails()">
                 <option value="">Select TYPE_NAME</option>
-                <!-- Options for TYPE_NAME will be populated here based on selected BRAND_NAME -->
+                <!-- Options will be populated here via JavaScript -->
             </select>
             <div id="typeDetails" style="margin-top: 20px;">
                 <h4>Details:</h4>
-                <label>ID: <input type="text" id="modalId" readonly></label>
                 <label>Title: <input type="text" id="modalTitle" readonly></label>
                 <label>Body: <textarea id="modalBody" readonly></textarea></label>
                 <label>Tags: <input type="text" id="modalTags" readonly></label>
@@ -265,82 +196,68 @@
 
     <script>
         let currentRowId = '';
-    let currentCost = ''; // Variable to hold the current cost
+        let currentPrice = '';
 
-        function openModal(productId, productTitle) {
+        function openModal(productId, productTitle, productPrice) {
             currentRowId = productId; // Store the PRODUCT_ID
+            currentPrice = productPrice; // Store the PRODUCT_PRICE
             document.getElementById('typeModal').style.display = 'block';
-                    currentCost = document.querySelector(`input[name="price-${productId}"]`).value; // Assuming price is accessible this way
-
-            fetchBrands(); // Fetch brands when modal opens
+            fetchProductTypes();
         }
 
         function closeModal() {
             document.getElementById('typeModal').style.display = 'none';
         }
 
-        function fetchBrands() {
-            fetch('/fetch_brands') // Ensure you have a route to fetch brands
-                .then(response => response.json())
-                .then(data => {
-                    const brandSelect = document.getElementById('brandSelect');
-                    brandSelect.innerHTML = '<option value="">Select BRAND_NAME</option>'; // Reset options
-                    data.forEach(brand => {
-                        const option = document.createElement('option');
-                        option.value = brand.name; // Assuming brand has a property 'name'
-                        option.textContent = brand.name;
-                        brandSelect.appendChild(option);
-                    });
-                })
-                .catch(error => console.error('Error fetching brands:', error));
-        }
-
-        function fetchTypeDetails() {
-            const selectedBrandName = document.getElementById('brandSelect').value;
-
-            fetch(`/fetch_types?brand_name=${selectedBrandName}`) // Fetch types based on selected brand
+        function fetchProductTypes() {
+            fetch('/fetch_types')
                 .then(response => response.json())
                 .then(data => {
                     const typeSelect = document.getElementById('typeSelect');
-                    typeSelect.innerHTML = '<option value="">Select TYPE_NAME</option>'; // Reset options
+                    typeSelect.innerHTML = '<option value="">TYPE NAME</option>'; // Reset options
                     data.forEach(type => {
                         const option = document.createElement('option');
-                        option.value = type.id; // Assuming type has an 'id' property
-                        option.textContent = type.name; // Assuming type has a 'name' property
+                        option.value = type.name; // Using TYPE_NAME as value
+                        option.textContent = type.name;
                         typeSelect.appendChild(option);
                     });
                 })
-                .catch(error => console.error('Error fetching type details:', error));
+                .catch(error => console.error('Error fetching product types:', error));
         }
 
-        function loadDetails() {
-            const selectedTypeId = document.getElementById('typeSelect').value;
+        function fetchTypeDetails() {
+            const selectedTypeName = document.getElementById('typeSelect').value;
 
-            fetch(`/fetch_type_details?id=${selectedTypeId}`) // Fetch details for the selected TYPE_NAME
+            fetch('/fetch_types')  // Fetch types again to get the details
                 .then(response => response.json())
                 .then(data => {
-                    if (data) {
-                        document.getElementById('modalId').value = data.id || ''; // Load ID
-                        document.getElementById('modalTitle').value = data.title || '';
-                        document.getElementById('modalBody').value = data.body || '';
-                        document.getElementById('modalTags').value = data.tags || '';
+                    const selectedType = data.find(type => type.name === selectedTypeName);
+                    if (selectedType) {
+                        document.getElementById('modalTitle').value = selectedType.title;
+                        document.getElementById('modalBody').value = selectedType.body;
+                        document.getElementById('modalTags').value = selectedType.tags;
+                    } else {
+                        // Clear fields if no type is selected
+                        document.getElementById('modalTitle').value = '';
+                        document.getElementById('modalBody').value = '';
+                        document.getElementById('modalTags').value = '';
                     }
                 })
                 .catch(error => console.error('Error fetching type details:', error));
         }
 
         function assignValues() {
-            const id = document.getElementById('modalId').value;
             const title = document.getElementById('modalTitle').value;
             const body = document.getElementById('modalBody').value;
             const tags = document.getElementById('modalTags').value;
 
-            // Concatenate PRODUCT_ID and COST to TITLE and BODY
-            const newTitle = `${currentRowId} ${title}`;
-            const newBody = `${currentRowId} ${currentCost} ${body}`;
+            // Prepend PRODUCT_ID and PRICE to the BODY
+            const newBody = `ID: ${currentRowId}-${currentPrice}\n\n${body}`;
+
+            // Prepend PRODUCT_ID to the TITLE
+            const newTitle = `${currentRowId} - ${title}`;
 
             document.querySelector(`input[name="title-${currentRowId}"]`).value = newTitle;
-            document.querySelector(`input[name="type_id-${currentRowId}"]`).value = id; // Set TYPE_ID
             document.querySelector(`textarea[name="body-${currentRowId}"]`).value = newBody;
             document.querySelector(`input[name="tags-${currentRowId}"]`).value = tags;
 
