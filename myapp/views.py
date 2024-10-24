@@ -113,6 +113,62 @@ def ajax(request):
 def research(request):
     return render(request,'research.html')
 
+def macd_report(request):
+    #
+    #     df['MACD'], df['Signal'] = calculate_macd(df)
+    #symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOTUSDT', 'OPUSDT', 'AVAXUSDT', 'LINKUSDT', 'SANDUSDT', 'SUIUSDT']
+    symbols = ['BTC_USDT',
+                   'ETH_USDT',
+                   'SOL_USDT',
+                   'BIGTIME_USDT',
+                   'MEME_USDT',
+                   'LINK_USDT',
+                   '1000BONK_USDT',
+                   'TRB_USDT',
+                   'TIA_USDT']
+    start_date = '01-01-2024'
+    end_date = '21-7-2024'
+    periods = ['Week1','Day1']
+    report_data = []
+    sell_score=''
+    sell_signals=''
+
+    #     # time_step = 'Day1' # 合约的参数：间隔: Min1、Min5、Min15、Min30、Min60、Hour4、Hour8、Day1、Week1、Month1，不填时默认Min1
+    #symbols= function.get_symbol_list()
+    for symbol in symbols:
+        # df = pd.read_csv(f'{symbol}_historical_data.csv', parse_dates=['Date'])
+        # df.set_index('Date', inplace=True)
+        for period in periods:
+        #df = function.getdata(symbol, start_date, end_date, periods)
+            try:
+                df = function.check_symbols_kline(symbol, period, 5)
+                print(symbol,df)
+
+                if (len(df) > 2):
+                    sell_score, sell_signals = function.check_sell_signals(df)
+
+                    df['MACD'], df['Signal'] = function.calculate_macd(df)
+                    cross_up, cross_down = function.check_macd_crosses(df)
+                    score, buy_signals = function.check_buy_signals(df)
+
+                    report_data.append({
+                        'Symbol': symbol,
+                        'Score': score,
+                        'Sell_Score': sell_score,
+                        'Sell_Signals': sell_signals,
+                        'Cross_Up': cross_up.index.tolist(),
+                        'Cross_Down': cross_down.index.tolist(),
+                        'Buy_Signals': buy_signals,
+                        'Period': period
+                    })
+
+            except Exception as e:
+                print('df error',e)
+
+    report_data.sort(key=lambda x: x['Score'], reverse=True)
+
+    return render(request, 'report/macd_report.html', {'report_data': report_data})
+
 def submit_backtest(request):
 
     exchange_info = client.get_exchange_info()

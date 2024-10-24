@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily MACD Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
+        th { background-color: #f2f2f2; }
+        h2 { color: #333; }
+    </style>
+</head>
+<body>
+    <h2>Daily MACD Report</h2>
+    <table>
+        <tr>
+            <th>Symbol</th>
+            <th>Period</th>
+
+            <th>Cross Up Dates</th>
+            <th>Cross Down Dates</th>
+             <th>Score</th>
+            <th>Buy Signals</th>
+                        <th>Sell Score</th>
+            <th>Sell Signals</th>
+        </tr>
+        {% for entry in report_data %}
+        <tr>
+            <td>{{ entry.Symbol }}</td>
+            <td>{{ entry.Period }}</td>
+
+            <td>{{ entry.Cross_Up|join:", " }}</td>
+            <td>{{ entry.Cross_Down|join:", " }}</td>
+                <td>{{ entry.Score }}</td>
+            <td>
+                {% for signal, dates in entry.Buy_Signals.items %}
+                    {{ signal }}: {{ dates|join:", " }}<br>
+                {% endfor %}
+
+
+              <td>{{ entry.Sell_Score }}</td>
+            <td>
+                {% for signal, dates in entry.Sell_Signals.items %}
+                    {{ signal }}: {{ dates|join:", " }}<br>
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

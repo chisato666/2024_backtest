@@ -220,7 +220,14 @@
               <option value="30m">30m</option>
               <option value="1h">1hr</option>
               <option value="4h" {% if data.period == '4h' %}selected{% endif %}>4h</option>
+              <option value="8h" {% if data.period == '8h' %}selected{% endif %}>8h</option>
+
               <option value="1d" {% if data.period == '1d' %}selected{% endif %}>1d</option>
+                            <option value="3d" {% if data.period == '3d' %}selected{% endif %}>3d</option>
+
+              <option value="1w" {% if data.period == '1w' %}selected{% endif %}>1w</option>
+              <option value="1M" {% if data.period == '1M' %}selected{% endif %}>1M</option>
+
             </select>
 		  </div>
 
@@ -243,7 +250,7 @@
               <option value="1" selected>1. Check the price increased 1% buy, TP 2% SL 2%</option>
               <option value="2">2. RSI > 70 buy and > upper BB , RSI < 30 and < lower BB Sell</option>
               <option value="3">3. 10ema cross up 50ema </option>
-              <option value="4">4. </option>
+              <option value="4">4. MACD cross up</option>
               <option value="5" >5. </option>
               <option value="6">6. </option>
             </select>
@@ -497,6 +504,7 @@
 
     </div>
 
+    <div class="testbox">
 
 <div>
 
@@ -504,6 +512,8 @@
 
 
 </div>
+        </div>
+
   <script>
   $(document).ready(function() {
     $('#option-select').change(function() {

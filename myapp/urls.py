@@ -18,8 +18,8 @@ urlpatterns = [
      path('graph/', graph_view, name='graph'),
      path("backtest/", views.backtest_view, name='backtest'),
 
-     path('ajax/',views.ajax)
-
+     path('ajax/',views.ajax),
+     path('macd_report/', views.macd_report, name='macd_report')
 
 ]
 

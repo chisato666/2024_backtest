@@ -72,7 +72,7 @@ def index():
         cursor.close()
         connection.close()
 
-    return render_template('index.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names, current_page=page, total_pages=total_pages, selected_sheet=selected_sheet, product_id=product_id)
+    return render_template('index2.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names, current_page=page, total_pages=total_pages, selected_sheet=selected_sheet, product_id=product_id)
 @app.route('/update', methods=['POST'])
 def update_product():
     print("Received POST request to update products.")
