@@ -141,7 +141,7 @@ def macd_report(request):
         for period in periods:
         #df = function.getdata(symbol, start_date, end_date, periods)
             try:
-                df = function.check_symbols_kline(symbol, period, 5)
+                df = function.check_symbols_kline(symbol, period, 15)
                 print(symbol,df)
 
                 if (len(df) > 2):
@@ -447,6 +447,50 @@ def get_btcusdt_price(request):
 
     # Return the price as a JSON response
     return JsonResponse({'symbol_name': data})
+
+
+def backtest_score(request):
+    if request.method == 'POST':
+        form = BacktestForm(request.POST)
+        if form.is_valid():
+            symbol = form.cleaned_data['symbol']
+            score_threshold = form.cleaned_data['score_threshold']
+            timeframe = form.cleaned_data['timeframe']
+
+            tp_percent = form.cleaned_data['tp_percent'] / 100
+            sl_percent = form.cleaned_data['sl_percent'] / 100
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+
+            # Load your data (adjust the path as necessary)
+            # df = pd.read_csv('your_data.csv', parse_dates=['Date'])
+            # df.set_index('Date', inplace=True)
+
+            df = function.check_symbols_kline(symbol, periods, 105)
+
+            df = df[(df.index >= start_date) & (df.index <= end_date)]
+
+            # Calculate scores and perform backtest
+            scores = function.calculate_scores_over_intervals(df, interval_days=10)
+            trades, total_profit = function.backtest_trading_strategy(df, scores, tp_percent, sl_percent)
+
+            # Save the result (optional)
+            BacktestResult.objects.create(
+                symbol=symbol,
+                score_threshold=score_threshold,
+                tp_percent=tp_percent * 100,
+                sl_percent=sl_percent * 100,
+                start_date=start_date,
+                end_date=end_date,
+                total_profit=total_profit
+            )
+
+            return render(request, 'backtest_score/results.html', {'total_profit': total_profit, 'trades': trades})
+
+    else:
+        form = BacktestForm()
+
+    return render(request, 'backtest_score/form.html', {'form': form})
 
 
 def getProfiles(request):

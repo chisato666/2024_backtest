@@ -72,7 +72,7 @@ def index():
         cursor.close()
         connection.close()
 
-    return render_template('index2.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names, current_page=page, total_pages=total_pages, selected_sheet=selected_sheet, product_id=product_id)
+    return render_template('index.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names, current_page=page, total_pages=total_pages, selected_sheet=selected_sheet, product_id=product_id)
 @app.route('/update', methods=['POST'])
 def update_product():
     print("Received POST request to update products.")
@@ -189,17 +189,17 @@ def fetch_brands():
         cursor.close()
         connection.close()
 
-@app.route('/fetch_types', methods=['GET'])
-def fetch_types():
+@app.route('/fetch_catas', methods=['GET'])
+def fetch_catas():
     brand_name = request.args.get('brand_name')
     try:
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
-        cursor.execute("SELECT ID, TYPE_NAME FROM PRODUCT_TYPE WHERE BRAND_NAME = %s", (brand_name,))
-        types = cursor.fetchall()
+        cursor.execute("SELECT DISTINCT CATA FROM PRODUCT_TYPE WHERE BRAND_NAME = %s", (brand_name,))
+        catas = cursor.fetchall()
 
-        return jsonify([{'id': row[0], 'name': row[1]} for row in types])  # Return ID and NAME
+        return jsonify([{'name': row[0]} for row in catas])  # Adjusted to return only CATA names
 
     except mysql.connector.Error as e:
         return jsonify({'error': str(e)}), 500
@@ -207,35 +207,61 @@ def fetch_types():
         cursor.close()
         connection.close()
 
-@app.route('/your_route', methods=['GET', 'POST'])
-def your_view():
-    per_page = request.args.get('per_page', default=20, type=int)
-    page = request.args.get('page', default=1, type=int)
-    # Fetch results based on per_page and page
-    results = fetch_results(per_page=per_page, page=page)
-    # Handle total count and pagination logic
-    total_count = get_total_count()  # Your logic to get total count
-    return render_template('your_template.html', results=results, total_count=total_count, per_page=per_page, page=page)
 
-@app.route('/fetch_type_details', methods=['GET'])
-def fetch_type_details():
-    type_id = request.args.get('id')
+@app.route('/fetch_types', methods=['GET'])
+def fetch_types():
+    brand_name = request.args.get('brand_name')  # Get BRAND_NAME
+    cata = request.args.get('cata')  # Get CATA
+
+    print(f"Brand Name: {brand_name}, CATA: {cata}")  # Log received parameters
+
     try:
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
-        cursor.execute("SELECT ID, TITLE, BODY, TAGS FROM PRODUCT_TYPE WHERE ID = %s", (type_id,))
-        details = cursor.fetchone()
+        # Query to fetch TYPE_NAME where BRAND_NAME and CATA match
+        cursor.execute("""
+            SELECT ID, TYPE_NAME 
+            FROM PRODUCT_TYPE 
+            WHERE BRAND_NAME = %s AND CATA = %s
+        """, (brand_name, cata))
 
-        if details:
+        types = cursor.fetchall()
+
+        print(f"Fetched Types: {types}")  # Log fetched types
+
+        return jsonify([{'id': row[0], 'name': row[1]} for row in types])
+
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+
+
+@app.route('/fetch_type_details', methods=['GET'])
+def fetch_type_details():
+    type_id = request.args.get('id')
+
+    try:
+        connection = connection_pool.get_connection()
+        cursor = connection.cursor()
+
+        # Fetch ID, TITLE, BODY, TAGS, and PHOTO from PRODUCT_TYPE
+        cursor.execute("SELECT ID, TITLE, BODY, TAGS, PHOTO FROM PRODUCT_TYPE WHERE ID = %s", (type_id,))
+        result = cursor.fetchone()
+
+        if result:
             return jsonify({
-                'id': details[0],  # PRODUCT_TYPE ID
-                'title': details[1],
-                'body': details[2],
-                'tags': details[3]
+                'id': result[0],
+                'title': result[1],
+                'body': result[2],
+                'tags': result[3],
+                'photo': result[4]  # Include PHOTO in the response
             })
         else:
-            return jsonify({}), 404
+            return jsonify({'error': 'Type not found'}), 404
 
     except mysql.connector.Error as e:
         return jsonify({'error': str(e)}), 500

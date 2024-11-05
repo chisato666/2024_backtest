@@ -112,51 +112,48 @@
             background-color: #ccc;
             cursor: not-allowed;
         }
-
-
-
-.pagination select {
-    margin: 0 10px;
-}
-
-.pagination a {
-    margin: 0 5px;
-    padding: 8px 12px;
-    background-color: #4CAF50;
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-}
-
-.pagination a:hover {
-    background-color: #45a049;
-}
-
+        .pagination select {
+            margin: 0 10px;
+        }
+        .pagination a {
+            margin: 0 5px;
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .pagination a:hover {
+            background-color: #45a049;
+        }
         @media (max-width: 768px) {
             img {
-                max-width: 80px;
-                max-height: 80px;
+                max-width: 180px;
+                max-height: 180px;
             }
             th, td {
                 padding: 8px;
             }
         }
-
-
+        .photo-container::after {
+    content: "";
+    display: table;
+    clear: both; /* Clear the float */
+}
     </style>
 </head>
 <body>
- <h1>Product Images</h1>
+    <h1>Product Images</h1>
 
     <div class="search-container">
         <form method="GET">
-            <select name="sheet_name">
+            <select name="sheet_name" aria-label="Select SHEET_NAME">
                 <option value="">Select SHEET_NAME</option>
                 {% for sheet in sheet_names %}
                     <option value="{{ sheet[0] }}" {% if sheet[0] == request.args.get('sheet_name') %}selected{% endif %}>{{ sheet[0] }}</option>
                 {% endfor %}
             </select>
-            <input type="text" name="product_id" placeholder="Search by PRODUCT_ID" value="{{ request.args.get('product_id', '') }}">
+            <input type="text" name="product_id" placeholder="Search by PRODUCT_ID" value="{{ request.args.get('product_id', '') }}" aria-label="Search by PRODUCT_ID">
             <button type="submit">Search</button>
         </form>
     </div>
@@ -170,7 +167,7 @@
             <tr>
                 <th>Image</th>
                 <th width="300">Title</th>
-                <th width="100"> Type ID</th> <!-- Changed from Cost to Type ID -->
+                <th width="100">Type ID</th>
                 <th width="200">Tags</th>
                 <th>Body</th>
                 <th>Status</th>
@@ -190,11 +187,10 @@
                     <td>
                         <input type="hidden" name="id-{{ row[0] }}" value="{{ row[0] }}">
                         <input type="text" name="title-{{ row[0] }}" value="{{ row[1] }}" size="40">
-                            <input type="hidden" name="price-{{ row[0] }}" value="{{ row[4] }}"> <!-- Assuming row[4] holds the COST -->
-
+                        <input type="hidden" name="price-{{ row[0] }}" value="{{ row[4] }}">
                     </td>
                     <td>
-                        <input type="text" name="type_id-{{ row[0] }}" class="small-input" value="{{ row[10] }}"> <!-- Assuming row[8] holds the TYPE_ID -->
+                        <input type="text" name="type_id-{{ row[0] }}" class="small-input" value="{{ row[10] }}">
                     </td>
                     <td>
                         <input type="text" name="tags-{{ row[0] }}" class="tags-input" value="{{ row[7] }}">
@@ -202,9 +198,8 @@
                     <td>
                         <textarea name="body-{{ row[0] }}">{{ row[5] }}</textarea>
                     </td>
-                    <td>{{ row[2] }}</td> <!-- Status -->
-                                        <td> <a href="{{ row[3] }}">URL</a></td> <!-- URL -->
-
+                    <td>{{ row[2] }}</td>
+                    <td><a href="{{ row[3] }}" target="_blank">URL</a></td>
                     <td>
                         <button type="button" onclick="openModal('{{ row[0] }}', '{{ row[1] }}')">Select</button>
                     </td>
@@ -213,51 +208,63 @@
         </table>
     </form>
 
-<div class="pagination">
-    <form method="GET" action="">
-        <label for="per-page">Items per page:</label>
-        <select name="per_page" id="per-page" onchange="this.form.submit()">
-            <option value="20" {% if rows_per_page == 20 %}selected{% endif %}>20</option>
-            <option value="50" {% if rows_per_page == 50 %}selected{% endif %}>50</option>
-        </select>
-    </form>
+    <div class="pagination">
+        <form method="GET" action="">
+            <label for="per-page">Items per page:</label>
+            <select name="per_page" id="per-page" onchange="this.form.submit()">
+                <option value="20" {% if rows_per_page == 20 %}selected{% endif %}>20</option>
+                <option value="50" {% if rows_per_page == 50 %}selected{% endif %}>50</option>
+            </select>
+        </form>
 
-    <div>
-        {% if page > 1 %}
-            <a href="?page={{ page - 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}">Previous</a>
-        {% endif %}
+        <div>
+            {% if page > 1 %}
+                <a href="?page={{ page - 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}">Previous</a>
+            {% endif %}
 
-        <span>Page {{ page }} of {{ total_pages }}</span>
+            <span>Page {{ page }} of {{ total_pages }}</span>
 
-        {% if page < total_pages %}
-            <a href="?page={{ page + 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}">Next</a>
-        {% endif %}
+            {% if page < total_pages %}
+                <a href="?page={{ page + 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}">Next</a>
+            {% endif %}
+        </div>
     </div>
-</div>
 
     {% else %}
         <p>No results found.</p>
     {% endif %}
 
-    <!-- Modal for selecting BRAND_NAME and TYPE_NAME -->
+    <!-- Modal for selecting BRAND_NAME, CATA and TYPE_NAME -->
     <div id="typeModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
-            <h2>Select Brand and Type</h2>
-            <select id="brandSelect" onchange="fetchTypeDetails()">
+            <h2>Select Brand, CATA, and Type</h2>
+            <select id="brandSelect" onchange="fetchCatas()" aria-label="Select Brand">
                 <option value="">Select BRAND_NAME</option>
-                <!-- Options will be populated here via JavaScript -->
             </select>
-            <select id="typeSelect" onchange="loadDetails()">
-                <option value="">Select TYPE_NAME</option>
-                <!-- Options for TYPE_NAME will be populated here based on selected BRAND_NAME -->
+
+            <select id="cataSelect" onchange="fetchTypeDetails()" aria-label="Select CATA">
+                <option value="">Select CATA</option> <!-- Initial option -->
             </select>
+
+            <select id="typeSelect" onchange="loadDetails()" aria-label="Select TYPE_NAME">
+                <option value="">Select TYPE_NAME</option> <!-- Initial option -->
+            </select>
+
+            <br><br>
+ <div class="photo-container">
+<img id="modalPhoto" src="" alt="Product Photo" style="max-width: 400px; height: auto; border-radius: 5px; float: left; margin-right: 10px;">
+ </div>
+
+
+
             <div id="typeDetails" style="margin-top: 20px;">
                 <h4>Details:</h4>
                 <label>ID: <input type="text" id="modalId" readonly></label>
                 <label>Title: <input type="text" id="modalTitle" readonly></label>
                 <label>Body: <textarea id="modalBody" readonly></textarea></label>
                 <label>Tags: <input type="text" id="modalTags" readonly></label>
+
             </div>
             <button onclick="assignValues()">OK</button>
         </div>
@@ -265,14 +272,13 @@
 
     <script>
         let currentRowId = '';
-    let currentCost = ''; // Variable to hold the current cost
+        let currentCost = '';
 
         function openModal(productId, productTitle) {
-            currentRowId = productId; // Store the PRODUCT_ID
+            currentRowId = productId;
             document.getElementById('typeModal').style.display = 'block';
-                    currentCost = document.querySelector(`input[name="price-${productId}"]`).value; // Assuming price is accessible this way
-
-            fetchBrands(); // Fetch brands when modal opens
+            currentCost = document.querySelector(`input[name="price-${productId}"]`).value;
+            fetchBrands();
         }
 
         function closeModal() {
@@ -280,14 +286,14 @@
         }
 
         function fetchBrands() {
-            fetch('/fetch_brands') // Ensure you have a route to fetch brands
+            fetch('/fetch_brands')
                 .then(response => response.json())
                 .then(data => {
                     const brandSelect = document.getElementById('brandSelect');
-                    brandSelect.innerHTML = '<option value="">Select BRAND_NAME</option>'; // Reset options
+                    brandSelect.innerHTML = '<option value="">Select Brand</option>';
                     data.forEach(brand => {
                         const option = document.createElement('option');
-                        option.value = brand.name; // Assuming brand has a property 'name'
+                        option.value = brand.name;
                         option.textContent = brand.name;
                         brandSelect.appendChild(option);
                     });
@@ -295,38 +301,80 @@
                 .catch(error => console.error('Error fetching brands:', error));
         }
 
+        function fetchCatas() {
+            const selectedBrandName = document.getElementById('brandSelect').value;
+            if (selectedBrandName) {
+                fetch(`/fetch_catas?brand_name=${encodeURIComponent(selectedBrandName)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const cataSelect = document.getElementById('cataSelect');
+                        cataSelect.innerHTML = '<option value="">Select CATA</option>';
+                        data.forEach(cata => {
+                            const option = document.createElement('option');
+                            option.value = cata.name;
+                            option.textContent = cata.name;
+                            cataSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error fetching catas:', error));
+            }
+        }
+
         function fetchTypeDetails() {
             const selectedBrandName = document.getElementById('brandSelect').value;
+            const selectedCata = document.getElementById('cataSelect').value;
 
-            fetch(`/fetch_types?brand_name=${selectedBrandName}`) // Fetch types based on selected brand
-                .then(response => response.json())
-                .then(data => {
-                    const typeSelect = document.getElementById('typeSelect');
-                    typeSelect.innerHTML = '<option value="">Select TYPE_NAME</option>'; // Reset options
-                    data.forEach(type => {
-                        const option = document.createElement('option');
-                        option.value = type.id; // Assuming type has an 'id' property
-                        option.textContent = type.name; // Assuming type has a 'name' property
-                        typeSelect.appendChild(option);
-                    });
-                })
-                .catch(error => console.error('Error fetching type details:', error));
+            if (selectedBrandName && selectedCata) {
+                fetch(`/fetch_types?brand_name=${encodeURIComponent(selectedBrandName)}&cata=${encodeURIComponent(selectedCata)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const typeSelect = document.getElementById('typeSelect');
+                        typeSelect.innerHTML = '<option value="">Select TYPE_NAME</option>'; // Reset options
+                        data.forEach(type => {
+                            const option = document.createElement('option');
+                            option.value = type.id;
+                            option.textContent = type.name;
+                            typeSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error fetching type details:', error));
+            }
         }
 
         function loadDetails() {
             const selectedTypeId = document.getElementById('typeSelect').value;
 
-            fetch(`/fetch_type_details?id=${selectedTypeId}`) // Fetch details for the selected TYPE_NAME
-                .then(response => response.json())
-                .then(data => {
-                    if (data) {
-                        document.getElementById('modalId').value = data.id || ''; // Load ID
-                        document.getElementById('modalTitle').value = data.title || '';
-                        document.getElementById('modalBody').value = data.body || '';
-                        document.getElementById('modalTags').value = data.tags || '';
-                    }
-                })
-                .catch(error => console.error('Error fetching type details:', error));
+            if (selectedTypeId) {
+                fetch(`/fetch_type_details?id=${selectedTypeId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data) {
+                            // Populate modal fields with fetched data
+                            document.getElementById('modalId').value = data.id || '';
+                            document.getElementById('modalTitle').value = data.title || '';
+                            document.getElementById('modalBody').value = data.body || '';
+                            document.getElementById('modalTags').value = data.tags || '';
+
+                            // Update the photo
+                            const photoElement = document.getElementById('modalPhoto');
+                            photoElement.src = data.photo || ''; // Set the photo source
+                            photoElement.alt = data.title || 'Product Photo'; // Set alt text
+                        }
+                    })
+                    .catch(error => console.error('Error fetching type details:', error));
+            } else {
+                // Reset the modal fields if no TYPE_NAME is selected
+                document.getElementById('modalId').value = '';
+                document.getElementById('modalTitle').value = '';
+                document.getElementById('modalBody').value = '';
+                document.getElementById('modalTags').value = '';
+                document.getElementById('modalPhoto').src = ''; // Clear the photo
+            }
         }
 
         function assignValues() {
@@ -335,7 +383,6 @@
             const body = document.getElementById('modalBody').value;
             const tags = document.getElementById('modalTags').value;
 
-            // Concatenate PRODUCT_ID and COST to TITLE and BODY
             const newTitle = `${currentRowId} ${title}`;
             const newBody = `${currentRowId} ${currentCost} ${body}`;
 

@@ -1194,6 +1194,136 @@ def calculate_scores(data):
 
     return scores
 
+
+def calculate_scores_over_intervals(df, interval_days=10):
+    scores = []
+    for i in range(0, len(df) - interval_days + 1):
+        window_df = df.iloc[i:i + interval_days]
+        score, _ = check_buy_signals(window_df)
+        scores.append(score)
+    return scores
+
+
+def plot_prices_and_scores(df, scores):
+    # Create a new DataFrame for plotting
+    score_df = pd.DataFrame({'Score': scores}, index=df.index[:len(scores)])
+
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    # Plot the price
+    ax1.set_xlabel('Date')
+    ax1.set_ylabel('Price', color='tab:blue')
+    ax1.plot(df.index, df['Close'], color='tab:blue', label='Price')
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+    # Create a second y-axis for the scores
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('Buy Score', color='tab:orange')
+    ax2.plot(score_df.index, score_df['Score'], color='tab:orange', label='Buy Score', linestyle='--')
+    ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+    # Add titles and legends
+    plt.title('Price and Buy Score Over Time')
+    fig.tight_layout()
+    plt.show()
+
+
+def backtest_trading_strategy(df, scores, tp_percent=0.20, sl_percent=0.10):
+    trades = []
+    total_profit = 0
+    position = None  # Track the current trade position
+
+    for i in range(len(df)):
+        score = scores[i] if i < len(scores) else 0
+
+        # Check if we should enter a trade
+        if score > 4 and position is None:
+            entry_price = df['Close'].iloc[i]
+            tp_price = entry_price * (1 + tp_percent)  # 20% TP
+            sl_price = entry_price * (1 - sl_percent)  # 10% SL
+            position = {
+                'entry_price': entry_price,
+                'tp_price': tp_price,
+                'sl_price': sl_price,
+                'entry_index': i
+            }
+            print(f"Entering trade at index {i}, price: {entry_price}")
+
+        # Check if we need to exit the trade
+        if position is not None:
+            current_price = df['Close'].iloc[i]
+            if current_price >= position['tp_price']:
+                profit = current_price - position['entry_price']
+                total_profit += profit
+                trades.append({
+                    'entry_price': position['entry_price'],
+                    'exit_price': current_price,
+                    'entry_index': position['entry_index'],
+                    'exit_index': i,
+                    'profit': profit
+                })
+                print(f"Taking profit at index {i}, price: {current_price}, profit: {profit}")
+                position = None  # Reset position after exit
+            elif current_price <= position['sl_price']:
+                loss = position['entry_price'] - current_price
+                total_profit -= loss
+                trades.append({
+                    'entry_price': position['entry_price'],
+                    'exit_price': current_price,
+                    'entry_index': position['entry_index'],
+                    'exit_index': i,
+                    'profit': -loss
+                })
+                print(f"Stopping loss at index {i}, price: {current_price}, loss: {loss}")
+                position = None  # Reset position after exit
+
+    return trades, total_profit
+
+def plot_trades(df, trades):
+    plt.figure(figsize=(12, 6))
+    plt.plot(df.index, df['Close'], color='blue', label='Price', alpha=0.5)
+
+    # Plot buy and sell points
+    for trade in trades:
+        entry_index = trade['entry_index']
+        exit_index = trade['exit_index']
+        plt.scatter(df.index[entry_index], trade['entry_price'], color='green', marker='^', label='Buy' if trade == trades[0] else "")
+        plt.scatter(df.index[exit_index], trade['exit_price'], color='red', marker='v', label='Sell' if trade == trades[0] else "")
+
+    plt.title('Price with Buy and Sell Points')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+# def plot_prices_and_scores(df, scores):
+#     score_df = pd.DataFrame({'Score': scores}, index=df.index[:len(scores)])
+#
+#     # Create subplots
+#     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
+#
+#     # Plot Price
+#     ax1.plot(df.index, df['Close'], color='blue', label='Price')
+#     ax1.set_title('Price Over Time')
+#     ax1.set_ylabel('Price')
+#     ax1.legend()
+#     ax1.grid()
+#
+#     # Plot Scores
+#     ax2.plot(score_df.index, score_df['Score'], color='orange', label='Buy Score', linestyle='--')
+#     ax2.set_title('Buy Score Over Time')
+#     ax2.set_ylabel('Buy Score')
+#     ax2.legend()
+#     ax2.grid()
+#
+#     # Set common x-axis label
+#     ax2.set_xlabel('Date')
+#
+#     # Adjust layout
+#     plt.tight_layout()
+#     plt.show()
+
 # crypto_list=get_symbol_list()
 # print(crypto_list)
 
@@ -1214,14 +1344,26 @@ def calculate_scores(data):
 
 # symbols=['BTCUSDT','ETHUSDT','SOLUSDT','DOTUSDT','OPUSDT','AVAXUSDT','LINKUSDT','SANDUSDT','SUIUSDT']
 #
-# start_date='01-01-2024'
-# end_date='21-7-2024'
-# periods='Week1'
-# sell_points=[]
-# buy_points=[]
-# symbol='BTC_USDT'
-# df = check_symbols_kline(symbol, periods, 5)
+start_date='01-01-2024'
+end_date='21-10-2024'
+periods='Day1'
+sell_points=[]
+buy_points=[]
+symbol='BTC_USDT'
+# df = check_symbols_kline(symbol, periods, 105)
 # print(symbol, df)
+# #
+# scores = calculate_scores_over_intervals(df, interval_days=15)  # Get scores over 10-day intervals
+#
+# trades, total_profit = backtest_trading_strategy(df, scores, tp_percent=0.10, sl_percent=0.05)
+#
+# # Display total profit
+# print(f"Total Profit: {total_profit}")
+# plot_trades(df, trades)
+
+
+#plot_prices_and_scores(df, scores)
+
 #
 # if (len(df) > 2):
 #     #sell_score, sell_signals = check_sell_signals(df)

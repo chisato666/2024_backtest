@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backtest Results</title>
+</head>
+<body>
+    <h1>Backtest Results</h1>
+    <p>Total Profit: {{ total_profit }}</p>
+    <h2>Trades</h2>
+    <table>
+        <tr>
+            <th>Entry Price</th>
+            <th>Exit Price</th>
+            <th>Profit</th>
+        </tr>
+        {% for trade in trades %}
+        <tr>
+            <td>{{ trade.entry_price }}</td>
+            <td>{{ trade.exit_price }}</td>
+            <td>{{ trade.profit }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="{% url 'backtest_view' %}">Back to Form</a>
+</body>
+</html>

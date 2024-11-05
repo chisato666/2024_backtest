@@ -19,7 +19,8 @@ urlpatterns = [
      path("backtest/", views.backtest_view, name='backtest'),
 
      path('ajax/',views.ajax),
-     path('macd_report/', views.macd_report, name='macd_report')
+     path('macd_report/', views.macd_report, name='macd_report'),
+     path('backtest_score/', views.backtest_score, name='backtest_score')
 
 ]
 
