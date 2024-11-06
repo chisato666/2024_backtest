@@ -34,7 +34,7 @@ SECRET_KEY = "django-insecure-i4h0-djretemxm#^=6-*=k^w_1n2ff0n%2$bym6det97wgki-9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["chisato666.tpddns.cn",'localhost','127.0.0.1','218.255.160.96','0.0.0.0','192.168.1.101','trendyground666.tpddns.cn']
+ALLOWED_HOSTS = ["chisato666.tpddns.cn",'localhost','127.0.0.1','218.255.160.96','0.0.0.0','192.168.1.101','trendyground.tpddns.cn']
 
 
 # Application definition
