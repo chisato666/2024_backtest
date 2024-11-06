@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import mysql.connector
 from mysql.connector import pooling
+import download_photo2
+
 
 app = Flask(__name__)
 
@@ -238,6 +240,20 @@ def fetch_types():
         cursor.close()
         connection.close()
 
+
+@app.route('/update_db', methods=['GET'])
+def update_db():
+    sheet_id = request.args.get('id')
+    try:
+        print('Start update db ', sheet_id)
+
+        download_photo2.update_product_status(sheet_id)
+        print('End update db ')
+    except error as e:
+        print(e)
+
+
+    return redirect(url_for('index'))
 
 
 @app.route('/fetch_type_details', methods=['GET'])
