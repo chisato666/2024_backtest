@@ -5,6 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Images</title>
     <style>
+    .custom-dropdown {
+    position: relative;
+    width: 300;
+    cursor: pointer;
+}
+
+.custom-dropdown-selected {
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.custom-dropdown-list {
+    position: absolute;
+    z-index: 1;
+    width: 300;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    border-radius: 5px;
+    max-height: 150px; /* Limit height */
+    overflow-y: auto; /* Enable scrolling */
+}
+
+.custom-dropdown-item {
+    padding: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.custom-dropdown-item:hover {
+    background-color: #f1f1f1; /* Highlight on hover */
+}
+
+.custom-dropdown-item img {
+    width: 30px; /* Adjust photo size */
+    height: auto;
+    margin-left: 10px; /* Space between text and image */
+}
+
+
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -145,18 +186,26 @@
 <body>
     <h1>Product Images</h1>
 
-    <div class="search-container">
-        <form method="GET">
-            <select name="sheet_name" aria-label="Select SHEET_NAME">
-                <option value="">Select SHEET_NAME</option>
-                {% for sheet in sheet_names %}
-                    <option value="{{ sheet[0] }}" {% if sheet[0] == request.args.get('sheet_name') %}selected{% endif %}>{{ sheet[0] }}</option>
-                {% endfor %}
-            </select>
-            <input type="text" name="product_id" placeholder="Search by PRODUCT_ID" value="{{ request.args.get('product_id', '') }}" aria-label="Search by PRODUCT_ID">
-            <button type="submit">Search</button>
-        </form>
-    </div>
+<div class="search-container">
+    <form method="GET">
+        <select name="sheet_name" aria-label="Select SHEET_NAME">
+            <option value="">Select SHEET_NAME</option>
+            {% for sheet in sheet_names %}
+                <option value="{{ sheet[0] }}" {% if sheet[0] == request.args.get('sheet_name') %}selected{% endif %}>{{ sheet[0] }}</option>
+            {% endfor %}
+        </select>
+           <select name="update_status" aria-label="Select UPDATE_STATUS">
+            <option value="N" {% if request.args.get('update_status') == 'N' %}selected{% endif %}>N</option>
+
+            <option value="Y" {% if request.args.get('update_status') == 'Y' %}selected{% endif %}>Y</option>
+        </select>
+        <input type="text" name="product_id" placeholder="Search by PRODUCT_ID" value="{{ request.args.get('product_id', '') }}" aria-label="Search by PRODUCT_ID">
+
+
+
+        <button type="submit">Search</button>
+    </form>
+</div>
 
     {% if results %}
     <form method="POST" action="/update">
@@ -201,7 +250,7 @@
                     <td>{{ row[2] }}</td>
                     <td><a href="{{ row[3] }}" target="_blank">URL</a></td>
                     <td>
-                        <button type="button" onclick="openModal('{{ row[0] }}', '{{ row[1] }}')">Select</button>
+                        <button type="button" onclick="openModal('{{ row[0] }}', escapeString('{{ row[1] | e }}'))">Select</button>
                     </td>
                 </tr>
             {% endfor %}
@@ -235,45 +284,60 @@
     {% endif %}
 
     <!-- Modal for selecting BRAND_NAME, CATA and TYPE_NAME -->
-    <div id="typeModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2>Select Brand, CATA, and Type</h2>
-            <select id="brandSelect" onchange="fetchCatas()" aria-label="Select Brand">
-                <option value="">Select BRAND_NAME</option>
-            </select>
+   <!-- Modal for selecting BRAND_NAME, CATA and TYPE_NAME -->
+<div id="typeModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Select Brand, CATA, and Type</h2>
+        <select id="brandSelect" onchange="fetchCatas()" aria-label="Select Brand">
+            <option value="">Select BRAND_NAME</option>
+        </select>
 
-            <select id="cataSelect" onchange="fetchTypeDetails()" aria-label="Select CATA">
-                <option value="">Select CATA</option> <!-- Initial option -->
-            </select>
+        <select id="cataSelect" onchange="fetchTypeDetails()" aria-label="Select CATA">
+            <option value="">Select CATA</option> <!-- Initial option -->
+        </select>
 
-            <select id="typeSelect" onchange="loadDetails()" aria-label="Select TYPE_NAME">
-                <option value="">Select TYPE_NAME</option> <!-- Initial option -->
-            </select>
-
-            <br><br>
- <div class="photo-container">
-<img id="modalPhoto" src="" alt="Product Photo" style="max-width: 400px; height: auto; border-radius: 5px; float: left; margin-right: 10px;">
- </div>
-
-
-
-            <div id="typeDetails" style="margin-top: 20px;">
-                <h4>Details:</h4>
-                <label>ID: <input type="text" id="modalId" readonly></label>
-                <label>Title: <input type="text" id="modalTitle" readonly></label>
-                <label>Body: <textarea id="modalBody" readonly></textarea></label>
-                <label>Tags: <input type="text" id="modalTags" readonly></label>
-
-            </div>
-            <button onclick="assignValues()">OK</button>
-        </div>
+<!-- Custom dropdown for TYPE_NAME -->
+<!-- Custom dropdown for TYPE_NAME -->
+<div >
+    <div  onclick="toggleDropdown()">
+        <span id="selectedType">Select TYPE_NAME</span>
     </div>
+    <div id="typeDropdown"  style="display: none;"></div>
+</div>
+
+        <br><br>
+        <div class="photo-container">
+            <img id="modalPhoto" src="" alt="Product Photo" style="max-width: 400px; height: auto; border-radius: 5px; float: left; margin-right: 10px;">
+        </div>
+
+
+
+
+
+        <div id="photoContainer" style="margin-top: 20px;"></div> <!-- Container for additional photos -->
+
+        <div id="typeDetails" style="margin-top: 20px;">
+            <h4>Details:</h4>
+            <label>ID: <input type="text" id="modalId" readonly></label>
+            <label>Title: <input type="text" id="modalTitle" readonly></label>
+            <label>Body: <textarea id="modalBody" readonly></textarea></label>
+            <label>Tags: <input type="text" id="modalTags" readonly></label>
+        </div>
+        <button onclick="assignValues()">OK</button>
+    </div>
+</div>
+
 
     <script>
         let currentRowId = '';
         let currentCost = '';
 
+function escapeString(str) {
+    return str.replace(/\\/g, '\\\\')  // Escape backslashes
+              .replace(/'/g, '\\\'')    // Escape single quotes
+              .replace(/"/g, '\\"');     // Escape double quotes
+}
         function openModal(productId, productTitle) {
             currentRowId = productId;
             document.getElementById('typeModal').style.display = 'block';
@@ -320,62 +384,97 @@
             }
         }
 
-        function fetchTypeDetails() {
-            const selectedBrandName = document.getElementById('brandSelect').value;
-            const selectedCata = document.getElementById('cataSelect').value;
+     function fetchTypeDetails() {
+    const brandSelect = document.getElementById('brandSelect');
+    const cataSelect = document.getElementById('cataSelect');
 
-            if (selectedBrandName && selectedCata) {
-                fetch(`/fetch_types?brand_name=${encodeURIComponent(selectedBrandName)}&cata=${encodeURIComponent(selectedCata)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        const typeSelect = document.getElementById('typeSelect');
-                        typeSelect.innerHTML = '<option value="">Select TYPE_NAME</option>'; // Reset options
-                        data.forEach(type => {
-                            const option = document.createElement('option');
-                            option.value = type.id;
-                            option.textContent = type.name;
-                            typeSelect.appendChild(option);
-                        });
-                    })
-                    .catch(error => console.error('Error fetching type details:', error));
-            }
-        }
+    const brandName = brandSelect.value;
+    const cata = cataSelect.value;
 
-        function loadDetails() {
-            const selectedTypeId = document.getElementById('typeSelect').value;
+    if (brandName && cata) {
+        fetch(`/fetch_types?brand_name=${encodeURIComponent(brandName)}&cata=${encodeURIComponent(cata)}`)
+            .then(response => response.json())
+            .then(data => {
+                const typeDropdown = document.getElementById('typeDropdown');
+                typeDropdown.innerHTML = ''; // Clear previous options
 
-            if (selectedTypeId) {
-                fetch(`/fetch_type_details?id=${selectedTypeId}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data) {
-                            // Populate modal fields with fetched data
-                            document.getElementById('modalId').value = data.id || '';
-                            document.getElementById('modalTitle').value = data.title || '';
-                            document.getElementById('modalBody').value = data.body || '';
-                            document.getElementById('modalTags').value = data.tags || '';
+                data.forEach(type => {
+                    const typeItem = document.createElement('div');
+                    typeItem.className = 'custom-dropdown-item';
+                    typeItem.onclick = () => selectType(type.id, type.name, type.photo_url);
 
-                            // Update the photo
-                            const photoElement = document.getElementById('modalPhoto');
-                            photoElement.src = data.photo || ''; // Set the photo source
-                            photoElement.alt = data.title || 'Product Photo'; // Set alt text
-                        }
-                    })
-                    .catch(error => console.error('Error fetching type details:', error));
-            } else {
-                // Reset the modal fields if no TYPE_NAME is selected
-                document.getElementById('modalId').value = '';
-                document.getElementById('modalTitle').value = '';
-                document.getElementById('modalBody').value = '';
-                document.getElementById('modalTags').value = '';
-                document.getElementById('modalPhoto').src = ''; // Clear the photo
-            }
-        }
+                    typeItem.innerHTML = `<span>${type.name}</span>
+                                          <img src="${type.photo_url}" alt="${type.name} Image" style="width: 50px; height: auto; margin-left: 10px;">`;
+                    typeDropdown.appendChild(typeItem);
+                });
+            })
+            .catch(error => console.error('Error fetching types:', error));
+    }
+}
+
+function loadDetails(typeId) {
+    if (typeId) {
+        fetch(`/fetch_type_details?id=${typeId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data) {
+                    // Populate modal fields with fetched data
+                    document.getElementById('modalId').value = data.id || '';
+                    document.getElementById('modalTitle').value = data.title || '';
+                    document.getElementById('modalBody').value = data.body || '';
+                    document.getElementById('modalTags').value = data.tags || '';
+
+                    // Update the primary photo
+                    const photoElement = document.getElementById('modalPhoto');
+                    photoElement.src = data.photo || ''; // Set the photo source
+                    photoElement.alt = data.title || 'Product Photo';
+                }
+            })
+            .catch(error => console.error('Error fetching type details:', error));
+    } else {
+        // Reset modal fields if no TYPE_NAME is selected
+        resetModal();
+    }
+}
+
+function resetModal() {
+    document.getElementById('modalId').value = '';
+    document.getElementById('modalTitle').value = '';
+    document.getElementById('modalBody').value = '';
+    document.getElementById('modalTags').value = '';
+    document.getElementById('modalPhoto').src = ''; // Clear the photo
+}
+
+function loadPhotos(typeId) {
+    const photoContainer = document.getElementById('photoContainer');
+
+    // Clear previous photos
+    photoContainer.innerHTML = '';
+
+    if (typeId) {
+        // Fetch photos related to the selected TYPE_NAME
+        fetch(`/fetch_photos?type_id=${typeId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && Array.isArray(data.photos)) {
+                    data.photos.forEach(photo => {
+                        const img = document.createElement('img');
+                        img.src = photo; // Assuming the photo URL is in the response
+                        img.alt = 'Product Photo';
+                        img.style.width = '80px'; // Set a width for the images
+                        img.style.height = 'auto';
+                        img.style.borderRadius = '5px';
+                        img.style.margin = '5px'; // Space between images
+                        photoContainer.appendChild(img);
+                    });
+                }
+            })
+            .catch(error => console.error('Error fetching photos:', error));
+    }
+}
+
+
+
 
         function assignValues() {
             const id = document.getElementById('modalId').value;
@@ -393,6 +492,29 @@
 
             closeModal();
         }
+
+
+function toggleDropdown() {
+    const dropdown = document.getElementById('typeDropdown');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectType(id, name, photoUrl) {
+    const selectedTypeElement = document.getElementById('selectedType');
+    selectedTypeElement.innerText = name;
+
+    // Set the modal photo based on selected TYPE_NAME
+    const photoElement = document.getElementById('modalPhoto');
+    photoElement.src = photoUrl || ''; // Set the selected photo URL
+    photoElement.alt = name || 'Product Photo';
+
+    // Close the dropdown
+    document.getElementById('typeDropdown').style.display = 'none';
+
+    // Load details if necessary
+    loadDetails(id);
+}
+
     </script>
 </body>
 </html>
