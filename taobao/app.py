@@ -28,29 +28,64 @@ def index():
     offset = (page - 1) * rows_per_page
     selected_sheet = request.args.get('sheet_name', '')
     product_id = request.args.get('product_id', '')
+    update_status = request.args.get('update_status', '')
+
+
 
     try:
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         # Fetch unique SHEET_NAMEs for the dropdown
-        cursor.execute("SELECT DISTINCT SHEET_NAME FROM PRODUCT")
+        cursor.execute("SELECT DISTINCT SHEET_NAME FROM PRODUCT ORDER BY STR_TO_DATE(SHEET_NAME, '%d%m%y')")
         sheet_names = cursor.fetchall()
 
         # Build the base query
-        query = "SELECT product_id, title, status, url, cost, body, photo, tags, created_date, updated_date, type_id FROM PRODUCT"
-        count_query = "SELECT COUNT(*) FROM PRODUCT"
+        query = "SELECT product_id, title, status, url, cost, body, photo, tags, created_date, updated_date, type_id FROM PRODUCT "
+        count_query = "SELECT COUNT(*) FROM PRODUCT "
         params = []
 
+        conditions = []  # List to hold conditions
+
+
+        conditions.append("status = '正常' ")
+
+
+        # Add conditions based on filters
         if product_id:
-            query += " WHERE product_id LIKE %s"
-            count_query += " WHERE product_id LIKE %s"
+            conditions.append("product_id LIKE %s")
             params.append(f'%{product_id}%')
-        elif selected_sheet:
-            query += " WHERE SHEET_NAME = %s"
-            count_query += " WHERE SHEET_NAME = %s"
+
+        if selected_sheet:
+            conditions.append("SHEET_NAME = %s")
             params.append(selected_sheet)
 
+        if update_status in ['Y', 'N']:
+            conditions.append("UPDATE_STATUS = %s")
+            params.append(update_status)
+
+        # Combine conditions into the main query
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+            count_query += " WHERE " + " AND ".join(conditions)
+
+        # if product_id:
+        #     query += " WHERE product_id LIKE %s"
+        #     count_query += " WHERE product_id LIKE %s"
+        #     params.append(f'%{product_id}%')
+        # elif selected_sheet:
+        #     query += " WHERE SHEET_NAME = %s"
+        #     count_query += " WHERE SHEET_NAME = %s"
+        #     params.append(selected_sheet)
+        #
+        #
+        # if update_status in ['Y', 'N']:
+        #     query += " AND UPDATE_STATUS = ?"
+        #     count_query += " AND UPDATE_STATUS = ?"
+        #
+        #     params.append(update_status)
+
+        print(query, count_query)
         # Fetch total rows
         cursor.execute(count_query, params if params else None)
         total_rows = cursor.fetchone()[0]
@@ -74,7 +109,7 @@ def index():
         cursor.close()
         connection.close()
 
-    return render_template('index.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names, current_page=page, total_pages=total_pages, selected_sheet=selected_sheet, product_id=product_id)
+    return render_template('index2.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names, current_page=page, total_pages=total_pages, selected_sheet=selected_sheet, product_id=product_id)
 @app.route('/update', methods=['POST'])
 def update_product():
     print("Received POST request to update products.")
@@ -215,24 +250,20 @@ def fetch_types():
     brand_name = request.args.get('brand_name')  # Get BRAND_NAME
     cata = request.args.get('cata')  # Get CATA
 
-    print(f"Brand Name: {brand_name}, CATA: {cata}")  # Log received parameters
-
     try:
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
-        # Query to fetch TYPE_NAME where BRAND_NAME and CATA match
+        # Query to fetch TYPE_NAME and associated PHOTO where BRAND_NAME and CATA match
         cursor.execute("""
-            SELECT ID, TYPE_NAME 
+            SELECT ID, TYPE_NAME, PHOTO 
             FROM PRODUCT_TYPE 
             WHERE BRAND_NAME = %s AND CATA = %s
         """, (brand_name, cata))
 
         types = cursor.fetchall()
 
-        print(f"Fetched Types: {types}")  # Log fetched types
-
-        return jsonify([{'id': row[0], 'name': row[1]} for row in types])
+        return jsonify([{'id': row[0], 'name': row[1], 'photo_url': row[2]} for row in types])
 
     except mysql.connector.Error as e:
         return jsonify({'error': str(e)}), 500
@@ -278,6 +309,32 @@ def fetch_type_details():
             })
         else:
             return jsonify({'error': 'Type not found'}), 404
+
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.route('/fetch_photos', methods=['GET'])
+def fetch_photos():
+    type_id = request.args.get('type_id')
+
+    try:
+        connection = connection_pool.get_connection()
+        cursor = connection.cursor()
+
+        # Fetch the photo URL associated with the given type_id
+        cursor.execute("SELECT PHOTO FROM PRODUCT_TYPE WHERE ID = %s", (type_id,))
+
+        result = cursor.fetchone()
+
+        if result:
+            # If a photo is found, return it in a list
+            return jsonify({'photos': [result[0]]})
+        else:
+            # If no photo is found, return an empty list
+            return jsonify({'photos': []})
 
     except mysql.connector.Error as e:
         return jsonify({'error': str(e)}), 500
