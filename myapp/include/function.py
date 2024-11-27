@@ -650,37 +650,48 @@ def check_symbols_with_increased_5d(percent, interval, limit):
                 print(symbol,interval,limit,percent)
 
                 df = check_symbols_kline(symbol, interval, limit)
-                print(df)
                 size = len(df)
 
-                start_price = df['Open'][0]
-                end_price = df['Close'][size - 1]
 
-                print(f'size {size} Start price {start_price}, End Price {end_price}')
+                print(df)
 
-                price_change = (end_price - start_price) / start_price * 100
-                print(f"Start price '{start_price}, End Price {end_price}, price change % {price_change}")
+                print(f"Size {size} , limit {limit}")
+                print(f"Size {type(size)} , limit {type(limit)}")
 
-                # line = [symbol, round(price_change_percentage*100,2)]
-                print('Type of price change ', type(price_change))
+                if (int(size) == int(limit)):
+                    start_price = df['Open'][0]
+                    end_price = df['Close'][size - 1]
 
-                url = "https://futures.mexc.com/exchange/" + symbol + "?type=linear_swap"
-                symbol = f'<a href="{url}" target="_blank">{symbol}</a>'
+                    #print(f'size {size} Start price {start_price}, End Price {end_price}')
+
+                    price_change = (end_price - start_price) / start_price * 100
+                    print(f"Start price '{start_price}, End Price {end_price}, price change % {price_change}  Size {size}")
+
+                    # line = [symbol, round(price_change_percentage*100,2)]
+                    print('Type of price change ', type(price_change))
+
+                    url = "https://futures.mexc.com/exchange/" + symbol + "?type=linear_swap"
+                    symbol = f'<a href="{url}" target="_blank">{symbol}</a>'
 
 
 
-                if (float(percent) >0) and (float(price_change) > float(percent)):
-                    price_change=round(float(price_change),2)
-                    line = [symbol, price_change, start_price,end_price]
+                    if (float(percent) >0) and (float(price_change) > float(percent)):
+                        price_change=round(float(price_change),2)
+                        line = [symbol, price_change, start_price,end_price]
 
-                    symbols.append(line)
-                    print('symbol added',symbol)
-                if (float(percent) < 0) and (float(price_change) < float(percent)):
-                    price_change = round(float(price_change), 2)
-                    line = [symbol, price_change,start_price,end_price]
+                        symbols.append(line)
+                        print('symbol added',symbol)
+                    if (float(percent) < 0) and (float(price_change) < float(percent)):
+                        price_change = round(float(price_change), 2)
+                        line = [symbol, price_change,start_price,end_price]
 
-                    symbols.append(line)
-                    print('symbol added', symbol)
+                        symbols.append(line)
+                        print('symbol added', symbol)
+                else:
+                    print(f" Symbol: {symbol},  Size: {size} , limit {limit} ")
+
+
+
             except Exception as error:
                 print(symbol, error)
 
@@ -1350,14 +1361,17 @@ def plot_trades(df, trades):
 
 # symbols=['BTCUSDT','ETHUSDT','SOLUSDT','DOTUSDT','OPUSDT','AVAXUSDT','LINKUSDT','SANDUSDT','SUIUSDT']
 #
-start_date='01-01-2024'
-end_date='21-10-2024'
-periods='Day1'
-sell_points=[]
-buy_points=[]
-symbol='BTC_USDT'
-# df = check_symbols_kline(symbol, periods, 105)
+# start_date='01-01-2024'
+# end_date='21-10-2024'
+# periods='Day1'
+# sell_points=[]
+# buy_points=[]
+# symbol='BTC_USDT'
+# limit=30
+# df = check_symbols_kline(symbol, periods, limit)
 # print(symbol, df)
+#
+# print(len(df), limit)
 # #
 # scores = calculate_scores_over_intervals(df, interval_days=15)  # Get scores over 10-day intervals
 #
@@ -1410,6 +1424,7 @@ symbol='BTC_USDT'
 # stored in a pandas DataFrame named 'data'
 
 # Assuming 'data' DataFrame has columns: ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+
 #data = check_symbols_kline(symbol, interval,limit)  # Replace this with your own data fetching logic
 
 # list=check_symbols_with_increased_5d(percent,interval,limit)
