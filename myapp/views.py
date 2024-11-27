@@ -26,6 +26,8 @@ from myapp.models import PriceAlert
 
 from django.conf import settings
 
+#update
+
 
 def backtest_view(request):
     if request.method == 'POST' and request.FILES['file']:
@@ -243,7 +245,11 @@ def submit_backtest(request):
                     # plot=get_plot(plt)
                     # plt.savefig(os.path.join('static', 'images', 'plot.png'))
                     print("rules 1")
+
+
                 if (rules == '2'):
+                    print("rules 2 start")
+
                     instance = oo_backtest.Backtest(symbol, start_date, end_date, period,buy_value,sell_value)
 
                     print(instance.buy_arr)
@@ -334,7 +340,7 @@ def submit_research(request):
                 
             elif (rules == '2'):
                 crypto_list = function.get_symbol_list()
-                print(crypto_list)
+                #print(crypto_list)
                 # time_step = 'Day1' # 合约的参数：间隔: Min1、Min5、Min15、Min30、Min60、Hour4、Hour8、Day1、Week1、Month1，不填时默认Min1
 
                 interval = "Week1"  # 1-hour candlestick data
