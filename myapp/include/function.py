@@ -10,7 +10,7 @@ from binance.client import Client
 client= Client()
 
 
-
+#update 18-Nov-2024
 
 def getdata(symbol,start_date,end_date,period):
 
@@ -644,8 +644,7 @@ def check_symbols_with_increased_5d(percent, interval, limit):
         x = 1
         for ticker in data['data']:
             x = x + 1
-            # if (x > 30):
-            #     break
+
             symbol = ticker['symbol']
             try:
                 print(symbol,interval,limit,percent)
@@ -653,25 +652,32 @@ def check_symbols_with_increased_5d(percent, interval, limit):
                 df = check_symbols_kline(symbol, interval, limit)
                 print(df)
                 size = len(df)
-                print('size',size)
 
-                start_price = df['open'][0]
-                end_price = df['close'][size - 1]
+                start_price = df['Open'][0]
+                end_price = df['Close'][size - 1]
 
+                print(f'size {size} Start price {start_price}, End Price {end_price}')
 
                 price_change = (end_price - start_price) / start_price * 100
-                print(start_price,end_price,price_change)
+                print(f"Start price '{start_price}, End Price {end_price}, price change % {price_change}")
 
                 # line = [symbol, round(price_change_percentage*100,2)]
+                print('Type of price change ', type(price_change))
+
+                url = "https://futures.mexc.com/exchange/" + symbol + "?type=linear_swap"
+                symbol = f'<a href="{url}" target="_blank">{symbol}</a>'
+
+
+
                 if (float(percent) >0) and (float(price_change) > float(percent)):
                     price_change=round(float(price_change),2)
-                    line = [symbol, price_change]
+                    line = [symbol, price_change, start_price,end_price]
 
                     symbols.append(line)
                     print('symbol added',symbol)
                 if (float(percent) < 0) and (float(price_change) < float(percent)):
                     price_change = round(float(price_change), 2)
-                    line = [symbol, price_change]
+                    line = [symbol, price_change,start_price,end_price]
 
                     symbols.append(line)
                     print('symbol added', symbol)
@@ -781,7 +787,7 @@ def check_ema(symbol):
 
 def check_rsi(df):
     # Logic to check if RSI > 70 for the symbol
-    df['rsi'] = ta.RSI((df['close']))
+    df['rsi'] = ta.RSI((df['Close']))
     return df  # Placeholder value
 
 # def calculate_macd(df, fast_period=12, slow_period=26, signal_period=9):
@@ -1043,13 +1049,13 @@ def check_ema_cross(data,check_range,symbol,ema_short,ema_long,cross_direction):
     ema_list=''
 
     if len(data) >= ema_long :
-        data['ema_short'] = data['close'].ewm(span=ema_short, adjust=False).mean()
-        data['ema_long'] = data['close'].ewm(span=ema_long, adjust=False).mean()
-        ma_short = data['close'].rolling(window=ema_short).mean()
-        ma_long = data['close'].rolling(window=ema_long).mean()
+        data['ema_short'] = data['Close'].ewm(span=ema_short, adjust=False).mean()
+        data['ema_long'] = data['Close'].ewm(span=ema_long, adjust=False).mean()
+        ma_short = data['Close'].rolling(window=ema_short).mean()
+        ma_long = data['Close'].rolling(window=ema_long).mean()
 
-        ema_short = data['close'].ewm(span=ema_short, adjust=False).mean()
-        ema_long = data['close'].ewm(span=ema_long, adjust=False).mean()
+        ema_short = data['Close'].ewm(span=ema_short, adjust=False).mean()
+        ema_long = data['Close'].ewm(span=ema_long, adjust=False).mean()
         #data.dropna(inplace=True)
 
         print(ema_short)
@@ -1058,7 +1064,7 @@ def check_ema_cross(data,check_range,symbol,ema_short,ema_long,cross_direction):
             #if (((cross_direction=='up' and ((ma_short[i] > ma_long[i]) and (ma_short[i-1] <= ma_long[i-1])))) or ((cross_direction=='down' and ((ma_short[i] < ma_long[i]) and (ma_short[i-1] >= ma_long[i-1]))))):
             if (((cross_direction=='up' and ((ema_short[i] > ema_long[i]) and (ema_short[i-1] <= ema_long[i-1])))) or ((cross_direction=='down' and ((ema_short[i] < ema_long[i]) and (ema_short[i-1] >= ema_long[i-1]))))):
                 cross_date = data.index[i]
-                print(f" {symbol} : i ={data['close'][i]} {ema_short[i-1]} | {ema_long[i-1]} EMA crossed {cross_direction} above {ema_short[i]} | {ema_long[i]} EMA on {cross_date}")
+                print(f" {symbol} : i ={data['Close'][i]} {ema_short[i-1]} | {ema_long[i-1]} EMA crossed {cross_direction} above {ema_short[i]} | {ema_long[i]} EMA on {cross_date}")
                 url="https://futures.mexc.com/exchange/" + symbol + "?type=linear_swap"
                 symbol_link=f'<a href="{url}" target="_blank">{symbol}</a>'
                 ema_list=[symbol_link,cross_date]
@@ -1067,11 +1073,11 @@ def check_ema_cross(data,check_range,symbol,ema_short,ema_long,cross_direction):
 
 
 def plot_crypto_price_with_ema(crypto_symbol, data):
-    ema_10 = data['close'].ewm(span=10, adjust=False).mean()
-    ema_50 = data['close'].ewm(span=50, adjust=False).mean()
+    ema_10 = data['Close'].ewm(span=10, adjust=False).mean()
+    ema_50 = data['Close'].ewm(span=50, adjust=False).mean()
 
     plt.figure(figsize=(12, 6))
-    plt.plot(data.index, data['close'], label=f"{crypto_symbol} Price")
+    plt.plot(data.index, data['Close'], label=f"{crypto_symbol} Price")
     plt.plot(data.index, ema_10, label="10-day EMA")
     plt.plot(data.index, ema_50, label="50-day EMA")
     plt.xlabel("Date")
@@ -1145,24 +1151,24 @@ def calculate_scores(data):
     scores = []
 
     # 計算移動平均線
-    data['MA'] = data['close'].rolling(window=10).mean()
+    data['MA'] = data['Close'].rolling(window=10).mean()
 
     # 計算相對強弱指數 (RSI)
-    data['RSI'] = ta.RSI(data['close'], timeperiod=14)
+    data['RSI'] = ta.RSI(data['Close'], timeperiod=14)
 
     # 計算布林帶
-    upper_band, middle_band, lower_band = ta.BBANDS(data['close'], timeperiod=20, nbdevup=2, nbdevdn=2)
+    upper_band, middle_band, lower_band = ta.BBANDS(data['Close'], timeperiod=20, nbdevup=2, nbdevdn=2)
     data['Upper Band'] = upper_band
     data['Middle Band'] = middle_band
     data['Lower Band'] = lower_band
 
     # 計算MACD
-    macd, macd_signal, _ = ta.MACD(data['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+    macd, macd_signal, _ = ta.MACD(data['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
     data['MACD'] = macd
     data['MACD Signal'] = macd_signal
 
     # 計算ATR
-    data['ATR'] = ta.ATR(data['high'], data['low'], data['close'], timeperiod=14)
+    data['ATR'] = ta.ATR(data['High'], data['Low'], data['Close'], timeperiod=14)
 
     # 計算評分
     for i in range(len(data)):
@@ -1177,9 +1183,9 @@ def calculate_scores(data):
         elif data['RSI'].iloc[i] < 30:
             daily_score -= 1
 
-        if data['close'].iloc[i] > data['Upper Band'].iloc[i]:
+        if data['Close'].iloc[i] > data['Upper Band'].iloc[i]:
             daily_score -= 1
-        elif data['close'].iloc[i] < data['Lower Band'].iloc[i]:
+        elif data['Close'].iloc[i] < data['Lower Band'].iloc[i]:
             daily_score += 1
 
         if data['MACD'].iloc[i] > data['MACD Signal'].iloc[i]:
@@ -1187,7 +1193,7 @@ def calculate_scores(data):
         elif data['MACD'].iloc[i] < data['MACD Signal'].iloc[i]:
             daily_score -= 1
 
-        if data['ATR'].iloc[i] > data['close'].iloc[i] * 0.02:  # 假設閾值為收盤價的2%
+        if data['ATR'].iloc[i] > data['Close'].iloc[i] * 0.02:  # 假設閾值為收盤價的2%
             daily_score += 1
 
         scores.append(daily_score)
