@@ -41,15 +41,14 @@ def index():
         sheet_names = cursor.fetchall()
 
         # Build the base query
-        query = "SELECT product_id, title, status, url, cost, body, photo, tags, created_date, updated_date, type_id FROM PRODUCT "
+        query = "SELECT product_id, title, status, url, cost, body, photo, tags, created_date, updated_date, type_id, price FROM PRODUCT "
         count_query = "SELECT COUNT(*) FROM PRODUCT "
         params = []
 
         conditions = []  # List to hold conditions
 
-
-        conditions.append("status = '正常' ")
-
+        if update_status=='N':
+            conditions.append("status = '正常' ")
 
         # Add conditions based on filters
         if product_id:
@@ -109,7 +108,7 @@ def index():
         cursor.close()
         connection.close()
 
-    return render_template('index.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names, current_page=page, total_pages=total_pages, selected_sheet=selected_sheet, product_id=product_id)
+    return render_template('index2.html', results=results, total_rows=total_rows, page=page, rows_per_page=rows_per_page, sheet_names=sheet_names, current_page=page, total_pages=total_pages, selected_sheet=selected_sheet, product_id=product_id, update_status=update_status)
 @app.route('/update', methods=['POST'])
 def update_product():
     print("Received POST request to update products.")
@@ -121,7 +120,7 @@ def update_product():
 
         update_query = """
         UPDATE PRODUCT
-        SET title = %s, cost = %s, body = %s, tags = %s, type_id = %s
+        SET title = %s, price = %s, body = %s, tags = %s, type_id = %s
         WHERE product_id = %s
         """
 
