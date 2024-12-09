@@ -216,7 +216,7 @@
             <tr>
                 <th>Image</th>
                 <th width="300">Title</th>
-                <th width="100">Type ID</th>
+                <th width="100">Price</th>
                 <th width="200">Tags</th>
                 <th>Body</th>
                 <th>Status</th>
@@ -236,10 +236,13 @@
                     <td>
                         <input type="hidden" name="id-{{ row[0] }}" value="{{ row[0] }}">
                         <input type="text" name="title-{{ row[0] }}" value="{{ row[1] }}" size="40">
-                        <input type="hidden" name="price-{{ row[0] }}" value="{{ row[4] }}">
+                        <input type="hidden" name="cost-{{ row[0] }}" value="{{ row[4] }}">
+                        <input type="hidden" name="type_id-{{ row[0] }}" class="small-input" value="{{ row[10] }}">
+
                     </td>
                     <td>
-                        <input type="text" name="type_id-{{ row[0] }}" class="small-input" value="{{ row[10] }}">
+                        <input type="text" name="price-{{ row[0] }}" value="{{ row[11] }}">
+
                     </td>
                     <td>
                         <input type="text" name="tags-{{ row[0] }}" class="tags-input" value="{{ row[7] }}">
@@ -250,7 +253,10 @@
                     <td>{{ row[2] }}</td>
                     <td><a href="{{ row[3] }}" target="_blank">URL</a></td>
                     <td>
-                        <button type="button" onclick="openModal('{{ row[0] }}', escapeString('{{ row[1] | e }}'))">Select</button>
+
+
+<button type="button" onclick="openModal('{{ row[0] }}', '{{ row[1] | replace("'", "\\'") }}')">Select</button>
+
                     </td>
                 </tr>
             {% endfor %}
@@ -268,13 +274,13 @@
 
         <div>
             {% if page > 1 %}
-                <a href="?page={{ page - 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}">Previous</a>
+                <a href="?page={{ page - 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}&update_status={{ update_status }}">Previous</a>
             {% endif %}
 
             <span>Page {{ page }} of {{ total_pages }}</span>
 
             {% if page < total_pages %}
-                <a href="?page={{ page + 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}">Next</a>
+                <a href="?page={{ page + 1 }}&per_page={{ rows_per_page }}&sheet_name={{ selected_sheet }}&product_id={{ product_id }}&update_status={{ update_status }}">Next</a>
             {% endif %}
         </div>
     </div>
@@ -336,12 +342,13 @@
 function escapeString(str) {
     return str.replace(/\\/g, '\\\\')  // Escape backslashes
               .replace(/'/g, '\\\'')    // Escape single quotes
+              .replace(/'/g, "\\'")    // Escape single quotes
               .replace(/"/g, '\\"');     // Escape double quotes
 }
         function openModal(productId, productTitle) {
             currentRowId = productId;
             document.getElementById('typeModal').style.display = 'block';
-            currentCost = document.querySelector(`input[name="price-${productId}"]`).value;
+            currentCost = document.querySelector(`input[name="cost-${productId}"]`).value;
             fetchBrands();
         }
 
